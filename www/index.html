@@ -33,7 +33,7 @@
     </ion-pane>
     -->
 
-    <ion-nav-bar class="nav-title-slide-ios7">
+    <ion-nav-bar class="bar-dark nav-title-slide-ios7">
       <ion-nav-back-button class="button-icon ion-arrow-left-c">
       </ion-nav-back-button>
     </ion-nav-bar>
@@ -44,40 +44,57 @@
       <ion-view title="Thread's Control Panel">
         <ion-content>
           <div class="button-bar padding">
-            <a butt class="button button-balanced">Mobius</a>
-            <a class="button button-balanced">CCast</a>
-            <a class="button button-balanced">Minijack</a>
-            <a class="button button-dark">Off</a>
+            <a butt="Mobius" class="button button-balanced">&infin;</a>
+            <a butt class="button button-balanced">CCast</a>
+            <a butt class="button button-balanced">Mini</a>
+            <a butt class="button button-dark">Off</a>
           </div>
           <div class="button-bar padding-horizontal padding-bottom">
-            <a class="button button-energized">0%</a>
-            <a class="button button-energized">20%</a>
-            <a class="button button-energized">40%</a>
-            <a class="button button-energized">60%</a>
-            <a class="button button-light">+</a>
-            <a class="button button-light">-</a>
+            <a butt class="button button-energized">0</a>
+            <a butt class="button button-energized">1</a>
+            <a butt class="button button-energized">2</a>
+            <a butt class="button button-dark">+</a>
           </div>
           <div class="button-bar padding-horizontal padding-bottom">
-            <a class="button button-positive icon ion-ios7-skipbackward"></a>
-            <a class="button button-positive icon ion-ios7-pause"></a>
-            <a class="button button-positive icon ion-ios7-skipforward"></a>
+            <a butt class="button button-energized">3</a>
+            <a butt class="button button-energized">4</a>
+            <a butt class="button button-energized">5</a>
+            <a butt class="button button-dark">-</a>
+          </div>
+          <div class="button-bar padding-horizontal padding-bottom">
+            <a butt="prev" class="button button-calm icon ion-ios7-skipbackward"></a>
+            <a butt="toggle" class="button button-calm icon ion-ios7-pause"></a>
+            <a butt="next" class="button button-calm icon ion-ios7-skipforward"></a>
           </div>
           <div class="item item-toggle">
             Append
             <label class="toggle">
-              <input type="checkbox">
+              <input type="checkbox" ng-change="appendToggle(ap)" ng-model="ap">
               <div class="track">
                 <div class="handle"></div>
               </div>
             </label>
           </div>
           <div class="button-bar padding">
-            <a class="button button-royal">db</a>
-            <a class="button button-royal">ab</a>
-            <a class="button button-royal">ch</a>
-            <a class="button button-royal">mi</a>
-            <a class="button button-royal">fo</a>
-            <a class="button button-royal">du</a>
+            <a butt class="button button-dark">db</a>
+            <a butt class="button button-dark">ch</a>
+            <a butt class="button button-dark">mi</a>
+            <a butt class="button button-dark">fo</a>
+            <a butt class="button button-dark">du</a>
+          </div>
+          <div class="button-bar padding-horizontal padding-bottom">
+            <a butt class="button button-dark">am</a>
+            <a butt class="button button-dark">ab</a>
+            <a butt class="button button-dark">bb</a>
+            <a butt class="button button-dark">dt</a>
+            <a butt class="button button-dark">ho</a>
+          </div>
+          <div class="button-bar padding-horizontal padding-bottom">
+            <a butt class="button button-dark">te</a>
+            <a butt class="button button-dark">id</a>
+            <a butt class="button button-dark">cl</a>
+            <a butt class="button button-dark">so</a>
+            <a butt class="button button-dark">el</a>
           </div>
         </ion-content>
       </ion-view>

@@ -5,8 +5,8 @@
 // the 2nd parameter is an array of 'requires'
 angular.module('mpct', ['ionic'])
 
-.constant('apiHost', 'localhost')
-// .constant('apiHost', 'mobius')
+// .constant('apiHost', 'localhost')
+.constant('apiHost', 'mobius')
 .constant('apiPort', 6601)
 
 .config(function($stateProvider, $urlRouterProvider, $httpProvider) {
@@ -37,35 +37,70 @@ angular.module('mpct', ['ionic'])
 .factory('api', function($http, apiHost, apiPort) {
   return {
     call: function(command, cb) {
-      console.log('fou');
-      console.log(command); 
       $http.post('http://' + apiHost + ':' + apiPort, command)
       .success(function(response) {
-        console.log(response);
+        // console.log(response);
         if (cb) cb();
       }).error(function(error) {
-        alert(error);
+        // alert(error);
       });
-    },
-    button: function(text, cb) {
-      console.log('thre');
-      this.call('-rt db', cb);
     }
   };
 })
 
-.directive('butt', function(api) {
+.directive('butt', function($rootScope, api) {
   return {
     restrict: 'A',
     link: function(scope, element, attributes) {
-      console.log('one');
       element.on('click', function() {
-        console.log('two');
-        api.button(element.text());
+        var cmd,
+          key = attributes.butt || element.text(),
+          a   = $rootScope.append ? ' -a' : '';
+
+        switch (key) {
+          case 'Mobius':   cmd = '-z mobius'; break;
+          case 'CCast':    cmd = '-z ccast'; break;
+          case 'Mini':     cmd = '-z mini'; break;
+          case 'Off':      cmd = '-z pwoff'; break;
+          case '0':        cmd = '-z v00'; break;
+          case '1':        cmd = '-z v30'; break;
+          case '2':        cmd = '-z v35'; break;
+          case '3':        cmd = '-z v40'; break;
+          case '4':        cmd = '-z v45'; break;
+          case '5':        cmd = '-z v50'; break;
+          case '+':        cmd = '-z vup'; break;
+          case '-':        cmd = '-z vdn'; break;
+          case 'prev':     cmd = '-x prev'; break
+          case 'toggle':   cmd = '-x toggle'; break
+          case 'next':     cmd = '-x next'; break
+
+          case 'db': cmd = '-rt db' + a; break;
+          case 'ch': cmd = '-rt ch' + a; break;
+          case 'mi': cmd = '-rt mi' + a; break;
+          case 'fo': cmd = '-rt fo' + a; break;
+          case 'du': cmd = '-rt du' + a; break;
+
+          case 'am': cmd = '-rt am' + a; break;
+          case 'ab': cmd = '-rt ab' + a; break;
+          case 'bb': cmd = '-rt bb' + a; break;
+          case 'dt': cmd = '-rt dt' + a; break;
+          case 'ho': cmd = '-rt ho' + a; break;
+
+          case 'te': cmd = '-rt te' + a; break;
+          case 'id': cmd = '-rt id' + a; break;
+          case 'cl': cmd = '-rt cl' + a; break;
+          case 'so': cmd = '-rt so' + a; break;
+          case 'el': cmd = '-rt el' + a; break;
+        }
+
+        api.call(cmd);
       });
     }
   };
 })
 
-.controller('PanelController', function() {
+.controller('PanelController', function($rootScope, $scope) {
+  $scope.appendToggle = function(ap) {
+    $rootScope.append = ap;
+  };
 });
