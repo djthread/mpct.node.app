@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+    <title>mpct</title>
+
+    <link href="lib/ionic/css/ionic.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+
+    <!-- IF using Sass (run gulp sass first), then uncomment below and remove the CSS includes above
+    <link href="css/ionic.app.css" rel="stylesheet">
+    -->
+
+    <!-- ionic/angularjs js -->
+    <script src="lib/ionic/js/ionic.bundle.js"></script>
+
+    <!-- cordova script (this will be a 404 during development) -->
+    <script src="cordova.js"></script>
+
+    <!-- your app's js -->
+    <script src="js/app.js"></script>
+  </head>
+  <body ng-app="mpct">
+
+    <!--
+    <ion-pane>
+      <ion-header-bar class="bar-stable">
+        <h1 class="title">mpct</h1>
+      </ion-header-bar>
+      <ion-content>
+      </ion-content>
+    </ion-pane>
+    -->
+
+    <ion-nav-bar class="nav-title-slide-ios7">
+      <ion-nav-back-button class="button-icon ion-arrow-left-c">
+      </ion-nav-back-button>
+    </ion-nav-bar>
+
+    <ion-nav-view animation="slide-left-right"></ion-nav-view> 
+
+    <script id="panel.html" type="text/ng-template">
+      <ion-view title="Thread's Control Panel">
+        <ion-content>
+          <div class="button-bar padding">
+            <a butt class="button button-balanced">Mobius</a>
+            <a class="button button-balanced">CCast</a>
+            <a class="button button-balanced">Minijack</a>
+            <a class="button button-dark">Off</a>
+          </div>
+          <div class="button-bar padding-horizontal padding-bottom">
+            <a class="button button-energized">0%</a>
+            <a class="button button-energized">20%</a>
+            <a class="button button-energized">40%</a>
+            <a class="button button-energized">60%</a>
+            <a class="button button-light">+</a>
+            <a class="button button-light">-</a>
+          </div>
+          <div class="button-bar padding-horizontal padding-bottom">
+            <a class="button button-positive icon ion-ios7-skipbackward"></a>
+            <a class="button button-positive icon ion-ios7-pause"></a>
+            <a class="button button-positive icon ion-ios7-skipforward"></a>
+          </div>
+          <div class="item item-toggle">
+            Append
+            <label class="toggle">
+              <input type="checkbox">
+              <div class="track">
+                <div class="handle"></div>
+              </div>
+            </label>
+          </div>
+          <div class="button-bar padding">
+            <a class="button button-royal">db</a>
+            <a class="button button-royal">ab</a>
+            <a class="button button-royal">ch</a>
+            <a class="button button-royal">mi</a>
+            <a class="button button-royal">fo</a>
+            <a class="button button-royal">du</a>
+          </div>
+        </ion-content>
+      </ion-view>
+    </script>
+
+  </body>
+</html>
