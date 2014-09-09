@@ -54,8 +54,9 @@ angular.module('mpct', ['ionic'])
     link: function(scope, element, attributes) {
       element.on('click', function() {
         var cmd,
-          key = attributes.butt || element.text(),
-          a   = $rootScope.append ? ' -a' : '';
+          wake = false,
+          key  = attributes.butt || element.text(),
+          a    = $rootScope.append ? ' -a' : '';
 
         switch (key) {
           case 'Mobius':   cmd = '-z mobius'; break;
@@ -74,24 +75,26 @@ angular.module('mpct', ['ionic'])
           case 'toggle':   cmd = '-x toggle'; break
           case 'next':     cmd = '-x next'; break
 
-          case 'db': cmd = '-rt db' + a; break;
-          case 'ch': cmd = '-rt ch' + a; break;
-          case 'mi': cmd = '-rt mi' + a; break;
-          case 'fo': cmd = '-rt fo' + a; break;
-          case 'du': cmd = '-rt du' + a; break;
+          case 'db': cmd = '-rt db' + a; wake = true; break;
+          case 'ch': cmd = '-rt ch' + a; wake = true; break;
+          case 'mi': cmd = '-rt mi' + a; wake = true; break;
+          case 'fo': cmd = '-rt fo' + a; wake = true; break;
+          case 'du': cmd = '-rt du' + a; wake = true; break;
 
-          case 'am': cmd = '-rt am' + a; break;
-          case 'ab': cmd = '-rt ab' + a; break;
-          case 'bb': cmd = '-rt bb' + a; break;
-          case 'dt': cmd = '-rt dt' + a; break;
-          case 'ho': cmd = '-rt ho' + a; break;
+          case 'am': cmd = '-rt am' + a; wake = true; break;
+          case 'ab': cmd = '-rt ab' + a; wake = true; break;
+          case 'bb': cmd = '-rt bb' + a; wake = true; break;
+          case 'dt': cmd = '-rt dt' + a; wake = true; break;
+          case 'ho': cmd = '-rt ho' + a; wake = true; break;
 
-          case 'te': cmd = '-rt te' + a; break;
-          case 'id': cmd = '-rt id' + a; break;
-          case 'cl': cmd = '-rt cl' + a; break;
-          case 'so': cmd = '-rt so' + a; break;
-          case 'el': cmd = '-rt el' + a; break;
+          case 'te': cmd = '-rt te' + a; wake = true; break;
+          case 'id': cmd = '-rt id' + a; wake = true; break;
+          case 'cl': cmd = '-rt cl' + a; wake = true; break;
+          case 'so': cmd = '-rt so' + a; wake = true; break;
+          case 'el': cmd = '-rt el' + a; wake = true; break;
         }
+
+        if (wake) api.call('-z mobius');
 
         api.call(cmd);
       });
