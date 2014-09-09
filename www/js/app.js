@@ -54,15 +54,16 @@ angular.module('mpct', ['ionic'])
     link: function(scope, element, attributes) {
       element.on('click', function() {
         var cmd,
-          wake = false,
-          key  = attributes.butt || element.text(),
-          a    = $rootScope.append ? ' -a' : '';
+          wake   = false,
+          pause  = false,
+          key    = attributes.butt || element.text(),
+          a      = $rootScope.append ? ' -a' : '';
 
         switch (key) {
           case 'Mobius':   cmd = '-z mobius'; break;
           case 'CCast':    cmd = '-z ccast'; break;
           case 'Mini':     cmd = '-z mini'; break;
-          case 'Off':      cmd = '-z pwoff'; break;
+          case 'Off':      cmd = '-z pwoff'; pause = true; break;
           case '0':        cmd = '-z v00'; break;
           case '1':        cmd = '-z v30'; break;
           case '2':        cmd = '-z v35'; break;
@@ -95,6 +96,8 @@ angular.module('mpct', ['ionic'])
         }
 
         if (wake) api.call('-z mobius');
+
+        if (pause) api.call('-x pause');
 
         api.call(cmd);
       });
