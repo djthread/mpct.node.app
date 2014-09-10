@@ -31,6 +31,10 @@ angular.module('mpct', ['ionic'])
     if(window.StatusBar) {
       StatusBar.styleDefault();
     }
+    // Lock orientation
+    // https://github.com/cogitor/PhoneGap-OrientationLock/blob/master/www/orientationLock.js
+    // return cordova.exec(success, fail, "OrientationLock", "lock", [orientation])
+    cordova.exec(null, null, 'OrientationLock', 'lock', ['portrait']);
   });
 })
 
@@ -60,21 +64,22 @@ angular.module('mpct', ['ionic'])
           a      = $rootScope.append ? ' -a' : '';
 
         switch (key) {
-          case 'Mobius':   cmd = '-z mobius'; break;
-          case 'CCast':    cmd = '-z ccast'; break;
-          case 'Mini':     cmd = '-z mini'; break;
+          case 'Mobius':   cmd = '-z mobius';   break;
+          case 'CCast':    cmd = '-z ccast';    break;
+          case 'Mini':     cmd = '-z mini';     break;
           case 'Off':      cmd = '-z pwoff'; pause = true; break;
-          case '0':        cmd = '-z v00'; break;
-          case '1':        cmd = '-z v30'; break;
-          case '2':        cmd = '-z v35'; break;
-          case '3':        cmd = '-z v40'; break;
-          case '4':        cmd = '-z v45'; break;
-          case '5':        cmd = '-z v50'; break;
-          case '+':        cmd = '-z vup'; break;
-          case '-':        cmd = '-z vdn'; break;
-          case 'prev':     cmd = '-x prev'; break
-          case 'toggle':   cmd = '-x toggle'; break
-          case 'next':     cmd = '-x next'; break
+          case '0':        cmd = '-z v00';      break;
+          case '1':        cmd = '-z v30';      break;
+          case '2':        cmd = '-z v35';      break;
+          case '3':        cmd = '-z v40';      break;
+          case '4':        cmd = '-z v45';      break;
+          case '5':        cmd = '-z v50';      break;
+          case '+':        cmd = '-z vup';      break;
+          case '-':        cmd = '-z vdn';      break;
+          case 'prev':     cmd = '-x prev';     break;
+          case 'toggle':   cmd = '-x toggle';   break;
+          case 'next':     cmd = '-x next';     break;
+          case 'jump':     cmd = '-x seek +60'; break;
 
           case 'db': cmd = '-rt db' + a; wake = true; break;
           case 'ch': cmd = '-rt ch' + a; wake = true; break;

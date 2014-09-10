@@ -66,16 +66,20 @@
             <a butt="toggle" class="button button-calm icon ion-ios7-play"></a>
             <a butt="next" class="button button-calm icon ion-ios7-skipforward"></a>
           </div>
-          <div class="item item-toggle">
-            Append
-            <label class="toggle">
-              <input type="checkbox" ng-change="appendToggle(ap)" ng-model="ap">
-              <div class="track">
-                <div class="handle"></div>
-              </div>
-            </label>
+          <div class="row padding-horizontal padding-bottom">
+            <a class="col col-33 button button-dark">dnbr</a>
+            <a butt="jump" class="col col-33 button button-calm icon ion-forward"></a>
+            <div class="col col-33 padding item item-toggle">
+              <i class="icon ion-android-arrow-down-right"></i>
+              <label class="toggle">
+                <input type="checkbox" ng-change="appendToggle(ap)" ng-model="ap">
+                <div class="track">
+                  <div class="handle"></div>
+                </div>
+              </label>
+            </div>
           </div>
-          <div class="button-bar padding">
+          <div class="button-bar padding-horizontal padding-bottom">
             <a butt class="button button-dark">db</a>
             <a butt class="button button-dark">ch</a>
             <a butt class="button button-dark">mi</a>
