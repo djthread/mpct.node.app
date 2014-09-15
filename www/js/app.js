@@ -79,7 +79,11 @@ angular.module('mpct', ['ionic'])
           case 'prev':     cmd = '-x prev';     break;
           case 'toggle':   cmd = '-x toggle';   break;
           case 'next':     cmd = '-x next';     break;
-          case 'jump':     cmd = '-x seek +60'; break;
+          case 'jump':     cmd = '-x seek +20%'; break;
+
+          case 'dnbr':
+            cmd = '-x add http://ildnb1.dnbradio.com:8000/';
+            break;
 
           case 'db': cmd = '-rt db' + a; wake = true; break;
           case 'ch': cmd = '-rt ch' + a; wake = true; break;
@@ -98,6 +102,15 @@ angular.module('mpct', ['ionic'])
           case 'cl': cmd = '-rt cl' + a; wake = true; break;
           case 'so': cmd = '-rt so' + a; wake = true; break;
           case 'el': cmd = '-rt el' + a; wake = true; break;
+        }
+
+        if (key === 'dnbr' && !a) {
+          api.call('-x clear', function() {
+            api.call(cmd, function() {
+              api.call('-x play');
+            });
+          });
+          return;
         }
 
         if (wake) api.call('-z mobius');
