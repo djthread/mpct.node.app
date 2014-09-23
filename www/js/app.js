@@ -8,6 +8,39 @@ angular.module('mpct', ['ionic'])
 // .constant('apiHost', 'localhost')
 .constant('apiHost', 'mobius')
 .constant('apiPort', 6601)
+.constant('genres', {
+  am: 'Ambient',
+  ab: 'Ambient Beats',
+  bb: 'Breakbeat',
+  bc: 'Breakcore, Gabber, and Noise',
+  ch: 'Chill Out and Dub',
+  cl: 'Classical',
+  co: 'Compilations',
+  dj: 'DJ Beats',
+  db: 'Drum \'n Bass',
+  dt: 'Dub Techno',
+  du: 'Dubstep',
+  el: 'Electronic and Electro',
+  fo: 'Folk',
+  go: 'Goa',
+  ho: 'House',
+  id: 'IDM',
+  ja: 'Jazz',
+  me: 'Metal',
+  mi: 'Minimalistic',
+  po: 'Pop',
+  pr: 'Post-rock',
+  ra: 'Rap and Hip Hop',
+  re: 'Reggae and Dub',
+  ro: 'Rock',
+  sl: 'Soul',
+  so: 'Soundtracks',
+  te: 'Techno',
+  tr: 'Trance',
+  th: 'Trip-Hop',
+  we: 'Weird',
+  wo: 'World and New Age'
+})
 
 .config(function($stateProvider, $urlRouterProvider, $httpProvider) {
 
@@ -82,6 +115,7 @@ angular.module('mpct', ['ionic'])
           case 'toggle':   cmd = '-x toggle';   break;
           case 'next':     cmd = '-x next';     break;
           case 'jump':     cmd = '-x seek +20%'; break;
+          case 'this':     cmd = '-b' + a;      break;
 
           case 'dnbr':
             cmd = '-x add http://ildnb1.dnbradio.com:8000/';
@@ -158,9 +192,12 @@ angular.module('mpct', ['ionic'])
 //   };
 // })
 
-.controller('PanelController', function($rootScope, $scope, $ionicScrollDelegate, api) {
+.controller('PanelController', function($rootScope, $scope, $ionicScrollDelegate, $interval, api, genres) {
 
+  $scope.activeIndex = 1;
   $scope.latest = [];
+  $scope.playlist = [];
+  $scope.status = 'idle';
 
   $scope.appendToggle = function(ap) {
     $rootScope.append = ap;
@@ -183,6 +220,41 @@ angular.module('mpct', ['ionic'])
       });
     }
   };
+
+  $scope.genres = [];
+  angular.forEach(genres, function(val, key) {
+    $scope.genres.push({
+      short:   key,
+      display: val
+    });
+  });
+
+  $scope.addRandomByGenre = function(short) {
+    a = $rootScope.append ? ' -a' : '';
+    api.call('-rt ' + short + a, refresh);
+  };
+
+  $scope.play = function(pos) {
+    api.call('-x play ' + pos, refresh);
+  };
+
+  // STATUS & PLAYLIST THINGS
+  var refresh = function() {
+    api.call('-x status', function(out) {
+      $scope.status = out.split("\n")[0];
+    });
+    api.call('-x playlist', function(out) {
+      $scope.playlist = [];
+      angular.forEach(out.trim().split("\n"), function(val, key) {
+        $scope.playlist.push({
+          pos:     key + 1,
+          display: val
+        });
+      });
+    });
+  };
+  $interval(refresh, 5000);
+  refresh();
 
   api.call('-l', function(response) {
     $scope.latest = response.map(function(la) {

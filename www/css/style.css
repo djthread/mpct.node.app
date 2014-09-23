@@ -8701,7 +8701,10 @@ a.button {
 
 ion-content { background-color: #222; }
 div.item { border: 0; text-align: right; }
-.item { background-color: #222; color: #eee; border-color: #333; padding: 8px; }
+.item { background-color: #222; color: #eee; border-color: #333; padding: 10px; }
 .item.activated { background-color: #444; border-color: #333; }
 .stamp { font-size: x-small; float: right; color: #777; }
 .dir { font-size: small; }
+.playlist-item { font-size: small; }
+p.info { color: #999; text-align: center; margin: 7px 0; }
+.item.active { background-color: #333; border-color: #222; }
