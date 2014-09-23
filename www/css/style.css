@@ -8700,4 +8700,8 @@ a.button {
   transition: none !important; }
 
 ion-content { background-color: #222; }
-div.item { background-color: #222; color: #eee; border: 0; text-align: right; }
+div.item { border: 0; text-align: right; }
+.item { background-color: #222; color: #eee; border-color: #333; padding: 8px; }
+.item.activated { background-color: #444; border-color: #333; }
+.stamp { font-size: x-small; float: right; color: #777; }
+.dir { font-size: small; }

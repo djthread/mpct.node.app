@@ -31,10 +31,12 @@ angular.module('mpct', ['ionic'])
     if(window.StatusBar) {
       StatusBar.styleDefault();
     }
+
     // Lock orientation
     // https://github.com/cogitor/PhoneGap-OrientationLock/blob/master/www/orientationLock.js
     // return cordova.exec(success, fail, "OrientationLock", "lock", [orientation])
-    cordova.exec(null, null, 'OrientationLock', 'lock', ['portrait']);
+    var fn = function(){};
+    cordova.exec(fn, fn, 'OrientationLock', 'lock', ['portrait']);
   });
 })
 
@@ -43,8 +45,8 @@ angular.module('mpct', ['ionic'])
     call: function(command, cb) {
       $http.post('http://' + apiHost + ':' + apiPort, command)
       .success(function(response) {
-        // console.log(response);
-        if (cb) cb();
+        // console.log('response', response);
+        if (cb) cb(response);
       }).error(function(error) {
         // alert(error);
       });
@@ -123,8 +125,73 @@ angular.module('mpct', ['ionic'])
   };
 })
 
-.controller('PanelController', function($rootScope, $scope) {
+.directive('peeyLevelIonSlides', function() {
+  return {
+    restrict: 'A',
+    link: function(scope, element, attrs) {
+      scope.$watch(
+        function () {
+          var activeSlideElement = angular.element(
+            element[0].getElementsByClassName(attrs.slideChildClass + '-active'));
+
+          // constantly remove max height from current element to allow it to expand if required
+          activeSlideElement.css('max-height', 'none');
+          // if activeSlideElement[0] is undefined, it means that it probably hasn't loaded yet
+          return angular.isDefined(activeSlideElement[0]) ? activeSlideElement[0].offsetHeight : 20;
+        },
+        function(newHeight, oldHeight) {
+          var sildeElements = angular.element(
+            element[0].getElementsByClassName(attrs.slideChildClass));
+          sildeElements.css('max-height', newHeight + 'px');
+        }
+      );
+    }
+  }
+})
+
+// .directive('latestItem', function($rootScope, api) {
+//   return {
+//     restrict: 'A',
+//     link: function(scope, element, attributes) {
+//       element.on('click', function(
+//     }
+//   };
+// })
+
+.controller('PanelController', function($rootScope, $scope, $ionicScrollDelegate, api) {
+
+  $scope.latest = [];
+
   $scope.appendToggle = function(ap) {
     $rootScope.append = ap;
   };
+
+  $scope.slide = function(index) {
+    $ionicScrollDelegate.scrollTop();
+  };
+
+  $scope.addLatest = function(dir) {
+    var cmd = '-x add "' + dir + '"';
+
+    if ($rootScope.append) {
+      api.call(cmd);
+    } else {
+      api.call('-x clear', function() {
+        api.call(cmd, function() {
+          api.call('-x play');
+        });
+      });
+    }
+  };
+
+  api.call('-l', function(response) {
+    $scope.latest = response.map(function(la) {
+      var d = new Date(la.lm);
+      la.formatted = d.getMonth() + '-' + d.getDate();
+      la.display = la.dir.replace(/^tmp\/stage5\//, '')
+        .replace(/^Chill Out and Dub\//, 'Chill/')
+        .replace(/^Drum 'n Bass\//, 'DnB/');
+      return la;
+    });
+  });
 });
