@@ -113,6 +113,8 @@ angular.module('mpct', ['ionic'])
           case '-':        cmd = '-z vdn';      break;
           case 'prev':     cmd = '-x prev';     break;
           case 'toggle':   cmd = '-x toggle';   break;
+          case 'play':     cmd = '-x play';     break;
+          case 'pause':    cmd = '-x pause';    break;
           case 'next':     cmd = '-x next';     break;
           case 'jump':     cmd = '-x seek +20%'; break;
           case 'this':     cmd = '-b' + a;      break;
@@ -123,21 +125,10 @@ angular.module('mpct', ['ionic'])
 
           case 'db': cmd = '-rt db' + a; wake = true; break;
           case 'ch': cmd = '-rt ch' + a; wake = true; break;
-          case 'mi': cmd = '-rt mi' + a; wake = true; break;
-          case 'fo': cmd = '-rt fo' + a; wake = true; break;
-          case 'du': cmd = '-rt du' + a; wake = true; break;
-
-          case 'am': cmd = '-rt am' + a; wake = true; break;
           case 'ab': cmd = '-rt ab' + a; wake = true; break;
-          case 'bb': cmd = '-rt bb' + a; wake = true; break;
-          case 'dt': cmd = '-rt dt' + a; wake = true; break;
-          case 'ho': cmd = '-rt ho' + a; wake = true; break;
-
-          case 'te': cmd = '-rt te' + a; wake = true; break;
           case 'id': cmd = '-rt id' + a; wake = true; break;
-          case 'cl': cmd = '-rt cl' + a; wake = true; break;
-          case 'so': cmd = '-rt so' + a; wake = true; break;
-          case 'el': cmd = '-rt el' + a; wake = true; break;
+          case 'ja': cmd = '-rt ja' + a; wake = true; break;
+          case 'te': cmd = '-rt te' + a; wake = true; break;
         }
 
         if (key === 'dnbr' && !a) {
@@ -153,7 +144,9 @@ angular.module('mpct', ['ionic'])
 
         if (pause) api.call('-x pause');
 
-        api.call(cmd);
+        api.call(cmd, function() {
+          $rootScope.$broadcast('shouldRefresh');
+        });
       });
     }
   };
@@ -198,6 +191,8 @@ angular.module('mpct', ['ionic'])
   $scope.latest = [];
   $scope.playlist = [];
   $scope.status = 'idle';
+  $scope.playing = false;
+  $scope.percent = 0;
 
   $scope.appendToggle = function(ap) {
     $rootScope.append = ap;
@@ -230,18 +225,24 @@ angular.module('mpct', ['ionic'])
   });
 
   $scope.addRandomByGenre = function(short) {
+    api.call('-z mobius');
     a = $rootScope.append ? ' -a' : '';
     api.call('-rt ' + short + a, refresh);
   };
 
   $scope.play = function(pos) {
+    api.call('-z mobius');
     api.call('-x play ' + pos, refresh);
   };
 
   // STATUS & PLAYLIST THINGS
   var refresh = function() {
     api.call('-x status', function(out) {
-      $scope.status = out.split("\n")[0];
+      out = out.trim().split("\n");
+      $scope.status = out[0];
+      $scope.playing = out[1].match(/\[playing\]/);
+      var matches = out[1].match(/\((\d+)%\)/);
+      $scope.percent = matches[1];
     });
     api.call('-x playlist', function(out) {
       $scope.playlist = [];
@@ -254,6 +255,7 @@ angular.module('mpct', ['ionic'])
     });
   };
   $interval(refresh, 5000);
+  $rootScope.$on('shouldRefresh', refresh);
   refresh();
 
   api.call('-l', function(response) {
