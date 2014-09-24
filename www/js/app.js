@@ -58,18 +58,21 @@ angular.module('mpct', ['ionic'])
   $ionicPlatform.ready(function() {
     // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
     // for form inputs)
-    if(window.cordova && window.cordova.plugins.Keyboard) {
-      cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
-    }
-    if(window.StatusBar) {
-      StatusBar.styleDefault();
-    }
+    // if(window.cordova && window.cordova.plugins.Keyboard) {
+    //   alert('1');
+    //   cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+    // }
+    //   alert('2');
+    // if(window.StatusBar) {
+    //   alert('3');
+    //   StatusBar.styleDefault();
+    // }
 
     // Lock orientation
     // https://github.com/cogitor/PhoneGap-OrientationLock/blob/master/www/orientationLock.js
     // return cordova.exec(success, fail, "OrientationLock", "lock", [orientation])
-    var fn = function(){};
-    cordova.exec(fn, fn, 'OrientationLock', 'lock', ['portrait']);
+    // var fn = function(o){alert('OL: '+o);};
+    // cordova.exec(fn, fn, 'OrientationLock', 'lock', ['portrait']);
   });
 })
 
@@ -102,7 +105,7 @@ angular.module('mpct', ['ionic'])
           case 'Mobius':   cmd = '-z mobius';   break;
           case 'CCast':    cmd = '-z ccast';    break;
           case 'Mini':     cmd = '-z mini';     break;
-          case 'Off':      cmd = '-z pwoff'; pause = true; break;
+          case 'Off':      cmd = '-z pwoff';    pause = true; break;
           case '0':        cmd = '-z v00';      break;
           case '1':        cmd = '-z v30';      break;
           case '2':        cmd = '-z v35';      break;
@@ -132,6 +135,7 @@ angular.module('mpct', ['ionic'])
         }
 
         if (key === 'dnbr' && !a) {
+          api.call('-z mobius');
           api.call('-x clear', function() {
             api.call(cmd, function() {
               api.call('-x play');
@@ -190,9 +194,10 @@ angular.module('mpct', ['ionic'])
   $scope.activeIndex = 1;
   $scope.latest = [];
   $scope.playlist = [];
-  $scope.status = 'idle';
   $scope.playing = false;
   $scope.percent = 0;
+  $scope.status = 'idle';
+  $scope.moreinfos = [];
 
   $scope.appendToggle = function(ap) {
     $rootScope.append = ap;
@@ -235,15 +240,59 @@ angular.module('mpct', ['ionic'])
     api.call('-x play ' + pos, refresh);
   };
 
+  $rootScope.launchClient = function() {
+    // var fn = function(o){alert(o);};
+    // cordova.exec(fn, fn, 'startApp', 'start', ['org.musicpd.android']);
+    alert('wat');
+    alert(navigator);
+    navigator.startApp.check('org.musicpd.android', function(msg) {
+      alert('ay. '+msg);
+      navigator.startApp.start('org.musicpd.android', function(msg) {
+        alert('by. '+msg);
+        console.log(msg);
+      }, function(er) {
+        alert('bn. '+er);
+      });
+    }, function(er) {
+      alert('an. '+er);
+    });
+  };
+
   // STATUS & PLAYLIST THINGS
   var refresh = function() {
+    var parseStatus = function(line) {
+      var m = line.match(/volume: ?([\dna%\/]+)\s+repeat: (\w+)\s+random:\s+(\w+)\s+single:\s+(\w+)\s+consume: ?(\w+)/);
+      if (m) {
+        return { volume:  m[1], repeat:  m[2], random:  m[3],
+                 single:  m[4], consume: m[5] };
+      } else {
+        return false;
+      }
+    };
+
+    var renderStatus = function(s) {
+      return 'vol: ' + s.volume + ' repeat: ' + s.repeat + ' random: '
+        + s.random + ' single: ' + s.single + ' consume: ' + s.consume;
+    };
+
     api.call('-x status', function(out) {
+      var s;
       out = out.trim().split("\n");
-      $scope.status = out[0];
-      $scope.playing = out[1].match(/\[playing\]/);
-      var matches = out[1].match(/\((\d+)%\)/);
-      $scope.percent = matches[1];
+      if (s = parseStatus(out[0])) {
+        $scope.playing = false;
+        $scope.percent = 0;
+        $scope.status = 'idle';
+        $scope.moreinfos = [renderStatus(s)];
+      } else {
+        $scope.status = out[0];
+        $scope.playing = out[1].match(/\[playing\]/);
+        var matches = out[1].match(/((\d+:\d\d)\/(\d+:\d\d)) \((\d+)%\)/);
+        $scope.percent = matches[4];
+
+        $scope.moreinfos = [matches[1] + ' ' + renderStatus(parseStatus(out[2]))];
+      }
     });
+
     api.call('-x playlist', function(out) {
       $scope.playlist = [];
       angular.forEach(out.trim().split("\n"), function(val, key) {

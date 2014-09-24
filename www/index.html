@@ -37,7 +37,7 @@
       <ion-nav-back-button class="button-icon ion-arrow-left-c">
       </ion-nav-back-button>
       <ion-nav-buttons side="right">
-        <button class="button ion-android-volume"></button>
+        <button class="button ion-android-volume" ng-click="launchClient()"></button>
       </ion-nav-buttons>
     </ion-nav-bar>
 
@@ -46,8 +46,9 @@
     <script id="panel.html" type="text/ng-template">
       <ion-view title="Thread's Control Panel">
         <ion-content delegate-handle="main">
-          <div style="height: 2px; width: {{percent}}%; transition: width 0.1s; background:#999;"></div>
-          <p class="info">{{status}}</p>
+          <div class="progress" style="width:{{percent}}%"></div>
+          <!-- <p class="info2" ng-repeat="mi in moreinfos">{{mi}}</p>
+          -->
           <ion-slide-box scroll="true" show-pager="false" active-slide="activeIndex"
             on-slide-changed="slide(index)">
             <ion-slide>
@@ -58,6 +59,7 @@
               </ion-list>
             </ion-slide>
             <ion-slide>
+              <p class="info">{{status}}</p>
               <div class="button-bar padding-horizontal padding-bottom">
                 <a butt="Mobius" class="button button-balanced">&infin;</a>
                 <a butt class="button button-balanced">CCast</a>
@@ -84,7 +86,7 @@
                 <a butt="next" class="button button-calm icon ion-ios7-skipforward"></a>
               </div>
               <div class="button-bar padding-horizontal padding-bottom">
-                <a butt="dnbr" class="button button-dark">dnbr</a>
+                <a butt="dnbr" class="button button-dark ion-disc"></a>
                 <a butt="this" class="button button-dark icon ion-headphone"></a>
                 <a butt="jump" class="button button-calm icon ion-forward"></a>
                 <div class="padding item item-toggle">
