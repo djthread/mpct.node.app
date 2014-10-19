@@ -11,7 +11,7 @@ angular.module('mpct', ['ionic'])
   mobius: {
     hostname:   'mobius',
     port:       6601,
-    useMarantz: false
+    useMarantz: true
   },
   pi: {
     hostname:   'mobius',
@@ -149,21 +149,20 @@ angular.module('mpct', ['ionic'])
         s, heartbeat;
 
     // turn them all off
-    // angular.forEach(sockets, function(so) {
-    //   if (so.connected) {
-    //     console.log('disconnecting..');
-    //     so.disconnect();
-    //   }
-    // });
+    angular.forEach(sockets, function(so) {
+      if (so.connected) {
+        console.log('disconnecting..');
+        so.io.disconnect();
+      }
+    });
 
     $rootScope.connected  = null;
-    $rootScope.host       = hostName;
-    $rootScope.useMarantz = hosts[hostName].useMarantz;
+    $rootScope.host       = null;
     $rootScope.status     = null;
 
     if (sockets[hostName]) {
-      // console.log('reconnecting', hostName, sockets[hostName]);
-      // sockets[hostName].connect();
+      console.log('reconnecting', hostName, sockets[hostName]);
+      sockets[hostName].io.reconnect();
       $rootScope.connected = true;
       sockets[hostName].emit('status');
       return;
@@ -179,6 +178,9 @@ angular.module('mpct', ['ionic'])
     sockets[hostName].on('connect', function() {
       console.log('connected', sockets[hostName]);
       $rootScope.connected = true;
+      $rootScope.host       = hostName;
+      $rootScope.useMarantz = hosts[hostName].useMarantz;
+      $rootScope.latest     = [];
 
       sockets[hostName].on('status', function(status) {
         console.log('got status', status);
@@ -207,6 +209,19 @@ angular.module('mpct', ['ionic'])
           heartbeatFn();
         }
       });
+
+      console.log('call -l -c 50');
+      call('-l -c 50', function(response) {
+        console.log('hai', response);
+        $rootScope.latest = response.map(function(la) {
+          var d = new Date(la.lm);
+          la.formatted = d.getMonth() + '-' + d.getDate();
+          la.display = la.dir.replace(/^tmp\/stage5\//, '')
+            .replace(/^Chill Out and Dub\//, 'Chill/')
+            .replace(/^Drum 'n Bass\//, 'DnB/');
+          return la;
+        });
+      });
     });
 
     sockets[hostName].on('disconnect', function() {
@@ -215,34 +230,40 @@ angular.module('mpct', ['ionic'])
     });
   };
 
+  var call = function(command, cb) {
+
+    if (!sockets[$rootScope.host].connected) {
+      return;
+    }
+
+    // Ignore on marantz command when marantz mode is disabled
+    if (command.match(/^-z /) && !$rootScope.useMarantz) {
+      if (cb) cb();
+      return;
+    }
+
+    console.log('emitting command', command);
+    sockets[$rootScope.host].emit('command', command, function(data) {
+      console.log('data', data);
+      if (cb) cb(data);
+    });
+
+    /*
+    $http.post('http://' + apiHost + ':' + apiPort, command)
+    .success(function(response) {
+      // console.log('response', response);
+      if (cb) cb(response);
+    }).error(function(error) {
+      // alert(error);
+    });
+    */
+  };
+
   connect();
 
   return {
     connect: connect,
-    call: function(command, cb) {
-
-      // Ignore on marantz command when marantz mode is disabled
-      if (command.match(/^-z /) && !$rootScope.useMarantz) {
-        if (cb) cb();
-        return;
-      }
-
-      console.log('emitting command', command);
-      sockets[$rootScope.host].emit('command', command, function(data) {
-        console.log('data', data);
-        if (cb) cb(data);
-      });
-
-      /*
-      $http.post('http://' + apiHost + ':' + apiPort, command)
-      .success(function(response) {
-        // console.log('response', response);
-        if (cb) cb(response);
-      }).error(function(error) {
-        // alert(error);
-      });
-      */
-    }
+    call:    call
   };
 })
 
@@ -388,24 +409,14 @@ angular.module('mpct', ['ionic'])
       });
     }
   };
-
-  console.log('call -l');
-  api.call('-l', function(response) {
-    console.log('hai', response);
-    $scope.latest = response.map(function(la) {
-      var d = new Date(la.lm);
-      la.formatted = d.getMonth() + '-' + d.getDate();
-      la.display = la.dir.replace(/^tmp\/stage5\//, '')
-        .replace(/^Chill Out and Dub\//, 'Chill/')
-        .replace(/^Drum 'n Bass\//, 'DnB/');
-      return la;
-    });
-  });
 })
 
 .controller('SettingsController', function($rootScope, $scope, api) {
   $scope.connect = function(host) {
     api.connect(host);
+  };
+  $scope.wipeCache = function() {
+    api.call('-w');
   };
 });
 

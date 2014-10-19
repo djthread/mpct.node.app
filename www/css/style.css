@@ -8714,3 +8714,4 @@ p.info2 { color: #999; text-align: center; margin: 0px 0 4px 0; font-size: x-sma
 /* a.dnbr { background-image: url(img/dnbradio.jpg); background-repeat: no-repeat; */
 /*     background-position: center; background-size: contain; } */
 div.progress { height: 2px; transition: width 0.1s; background: #999; }
+.tabs-dark > .tabs, .tabs.tabs-dark { background-color: black; }
