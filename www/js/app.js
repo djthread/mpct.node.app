@@ -14,11 +14,11 @@ angular.module('mpct', ['ionic'])
     useMarantz: false
   },
   pi: {
-    hostname:   'pi',
+    hostname:   'mobius',
     port:       6602,
     useMarantz: false
   }
-};
+})
 
 .constant('genres', {
   am: 'Ambient',
@@ -57,18 +57,59 @@ angular.module('mpct', ['ionic'])
 .config(function($stateProvider, $urlRouterProvider, $httpProvider) {
 
   $stateProvider
+    .state('tabs', {
+      url:         '/tab',
+      abstract:    true,
+      templateUrl: 'tabs.html'
+    })
+    .state('tabs.main', {
+      url: '/main',
+      views: {
+        'main-tab': {
+          templateUrl: 'main.html',
+          controller:  'MainController'
+        }
+      }
+    })
+    .state('tabs.genres', {
+      url: '/genres',
+      views: {
+        'genres-tab': {
+          templateUrl: 'genres.html',
+          controller:  'GenresController'
+        }
+      }
+    })
+    .state('tabs.latest', {
+      url: '/latest',
+      views: {
+        'latest-tab': {
+          templateUrl: 'latest.html',
+          controller:  'LatestController'
+        }
+      }
+    })
+    .state('tabs.settings', {
+      url: '/settings',
+      views: {
+        'settings-tab': {
+          templateUrl: 'settings.html',
+          controller:  'SettingsController'
+        }
+      }
+    });
+/*
     .state('panel', {
       url: '/panel',
       templateUrl: 'panel.html',
       controller: 'PanelController'
     });
+    */
 
-  $urlRouterProvider.otherwise('/panel');
+  $urlRouterProvider.otherwise('/tab/main');
 })
 
 .run(function($ionicPlatform, api) {
-
-  api.connect();
 
   $ionicPlatform.ready(function() {
     // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
@@ -92,30 +133,89 @@ angular.module('mpct', ['ionic'])
   });
 })
 
-.factory('api', function($rootScope, $http, hosts, defaultApiHost) {
+.factory('api', function($rootScope, $http, $interval, hosts, defaultApiHost) {
+  var sockets = [];
 
   console.log('api init');
-  $rootScope.host      = defaultApiHost;
-  $rootScope.connected = false;
+  $rootScope.host       = defaultApiHost;
+  $rootScope.connected  = false;
   $rootScope.useMarantz = null;
 
   var connect = function(hostName) {
-    var host  = hosts[hostName || $rootScope.host].hostname,
-        port  = hosts[hostName || $rootScope.host].port,
-        s     = io('http://' + host + ':' + port);
+    hostName = hostName || $rootScope.host;
 
-    s.on('connect', function() {
-      // console.log('a user connected', socket);
+    var host = hosts[hostName].hostname,
+        port = hosts[hostName].port,
+        s, heartbeat;
+
+    // turn them all off
+    // angular.forEach(sockets, function(so) {
+    //   if (so.connected) {
+    //     console.log('disconnecting..');
+    //     so.disconnect();
+    //   }
+    // });
+
+    $rootScope.connected  = null;
+    $rootScope.host       = hostName;
+    $rootScope.useMarantz = hosts[hostName].useMarantz;
+    $rootScope.status     = null;
+
+    if (sockets[hostName]) {
+      // console.log('reconnecting', hostName, sockets[hostName]);
+      // sockets[hostName].connect();
       $rootScope.connected = true;
-      $rootScope.useMarantz = hosts[$rootScope.host].useMarantz;
+      sockets[hostName].emit('status');
+      return;
+    }
+
+    console.log('connecting...', host, port);
+    sockets[hostName] = io.connect('http://' + host + ':' + port);
+
+    console.log('s', sockets[hostName]);
+
+    sockets[hostName].emit('status');
+
+    sockets[hostName].on('connect', function() {
+      console.log('connected', sockets[hostName]);
+      $rootScope.connected = true;
+
+      sockets[hostName].on('status', function(status) {
+        console.log('got status', status);
+        $rootScope.status = status;
+
+        var elapsed = $rootScope.status.status.elapsed;
+
+        $rootScope.playing = status.status.state === 'play';
+
+        var heartbeatFn = function() {
+          if ($rootScope.status && $rootScope.status.currentSong) {
+            elapsed++;
+            $rootScope.percent = parseInt(elapsed
+              / $rootScope.status.currentSong.Time * 100);
+          } else {
+            $rootScope.percent = 0;
+          }
+        };
+
+        if (heartbeat || !$rootScope.playing) {
+          $interval.cancel(heartbeat);
+        }
+
+        if ($rootScope.playing) {
+          heartbeat = $interval(heartbeatFn, 1000);
+          heartbeatFn();
+        }
+      });
     });
-    s.on('disconnect', function() {
-      // console.log('user disconnected');
+
+    sockets[hostName].on('disconnect', function() {
+      console.log('disconnected');
       $rootScope.connected = false;
     });
-
-    return s;
   };
+
+  connect();
 
   return {
     connect: connect,
@@ -123,10 +223,13 @@ angular.module('mpct', ['ionic'])
 
       // Ignore on marantz command when marantz mode is disabled
       if (command.match(/^-z /) && !$rootScope.useMarantz) {
-        return cb();
+        if (cb) cb();
+        return;
       }
 
-      socket.emit('command', command, function(data) {
+      console.log('emitting command', command);
+      sockets[$rootScope.host].emit('command', command, function(data) {
+        console.log('data', data);
         if (cb) cb(data);
       });
 
@@ -148,6 +251,8 @@ angular.module('mpct', ['ionic'])
     restrict: 'A',
     link: function(scope, element, attributes) {
       element.on('click', function() {
+        if (!$rootScope.connected) return;
+
         var cmd,
           wake   = false,
           pause  = false,
@@ -233,36 +338,7 @@ angular.module('mpct', ['ionic'])
   }
 })
 
-.controller('PanelController', function($rootScope, $scope, $ionicScrollDelegate, $interval, api, genres, socket) {
-
-  var heartbeat;
-
-  $scope.activeIndex = 1;
-  $scope.latest      = [];
-
-  socket.emit('status');
-  socket.on('status', function(status) {
-    $rootScope.status = status;
-
-    var elapsed = $rootScope.status.status.elapsed;
-
-    $scope.playing = status.status.state === 'play';
-
-    var heartbeatFn = function() {
-      elapsed++;
-      $rootScope.percent = parseInt(elapsed
-        / $rootScope.status.currentSong.Time * 100);
-    };
-
-    if (heartbeat || !$scope.playing) {
-      $interval.cancel(heartbeat);
-    }
-
-    if ($scope.playing) {
-      heartbeat = $interval(heartbeatFn, 1000);
-      heartbeatFn();
-    }
-  });
+.controller('MainController', function($rootScope, $scope, $ionicScrollDelegate, api) {
 
   $scope.appendToggle = function(ap) {
     $rootScope.append = ap;
@@ -271,6 +347,33 @@ angular.module('mpct', ['ionic'])
   $scope.slide = function(index) {
     $ionicScrollDelegate.scrollTop();
   };
+
+  $scope.play = function(pos) {
+    pos = parseInt(pos);
+    api.call('-z mobius');
+    api.call('-x play ' + (pos + 1));
+  };
+
+})
+
+.controller('GenresController', function($rootScope, $scope, api, genres) {
+
+  $scope.genres = [];
+  angular.forEach(genres, function(val, key) {
+    $scope.genres.push({
+      short:   key,
+      display: val
+    });
+  });
+
+  $scope.addRandomByGenre = function(short) {
+    api.call('-z mobius');
+    a = $rootScope.append ? ' -a' : '';
+    api.call('-rt ' + short + a);
+  };
+})
+
+.controller('LatestController', function($rootScope, $scope, api) {
 
   $scope.addLatest = function(dir) {
     var cmd = '-x add "' + dir + '"';
@@ -286,45 +389,9 @@ angular.module('mpct', ['ionic'])
     }
   };
 
-  $scope.genres = [];
-  angular.forEach(genres, function(val, key) {
-    $scope.genres.push({
-      short:   key,
-      display: val
-    });
-  });
-
-  $scope.addRandomByGenre = function(short) {
-    api.call('-z mobius');
-    a = $rootScope.append ? ' -a' : '';
-    api.call('-rt ' + short + a);
-  };
-
-  $scope.play = function(pos) {
-    pos = parseInt(pos);
-    api.call('-z mobius');
-    api.call('-x play ' + (pos + 1));
-  };
-
-  $rootScope.launchClient = function() {
-    // var fn = function(o){alert(o);};
-    // cordova.exec(fn, fn, 'startApp', 'start', ['org.musicpd.android']);
-    alert('wat');
-    alert(navigator);
-    navigator.startApp.check('org.musicpd.android', function(msg) {
-      alert('ay. '+msg);
-      navigator.startApp.start('org.musicpd.android', function(msg) {
-        alert('by. '+msg);
-        console.log(msg);
-      }, function(er) {
-        alert('bn. '+er);
-      });
-    }, function(er) {
-      alert('an. '+er);
-    });
-  };
-
+  console.log('call -l');
   api.call('-l', function(response) {
+    console.log('hai', response);
     $scope.latest = response.map(function(la) {
       var d = new Date(la.lm);
       la.formatted = d.getMonth() + '-' + d.getDate();
@@ -334,4 +401,28 @@ angular.module('mpct', ['ionic'])
       return la;
     });
   });
+})
+
+.controller('SettingsController', function($rootScope, $scope, api) {
+  $scope.connect = function(host) {
+    api.connect(host);
+  };
 });
+
+  // $rootScope.launchClient = function() {
+  //   // var fn = function(o){alert(o);};
+  //   // cordova.exec(fn, fn, 'startApp', 'start', ['org.musicpd.android']);
+  //   alert('wat');
+  //   alert(navigator);
+  //   navigator.startApp.check('org.musicpd.android', function(msg) {
+  //     alert('ay. '+msg);
+  //     navigator.startApp.start('org.musicpd.android', function(msg) {
+  //       alert('by. '+msg);
+  //       console.log(msg);
+  //     }, function(er) {
+  //       alert('bn. '+er);
+  //     });
+  //   }, function(er) {
+  //     alert('an. '+er);
+  //   });
+  // };

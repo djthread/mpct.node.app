@@ -60,90 +60,118 @@
 
     <ion-nav-view animation="slide-left-right"></ion-nav-view> 
 
-    <script id="panel.html" type="text/ng-template">
-      <ion-view title="Thread's Control Panel">
-        <ion-content delegate-handle="main">
-          <div class="progress" style="width:{{percent}}%"></div>
-          <!-- <p class="info2" ng-repeat="mi in moreinfos">{{mi}}</p>
-          -->
-          <ion-slide-box scroll="true" show-pager="false" active-slide="activeIndex"
-            on-slide-changed="slide(index)">
-            <ion-slide>
-              <ion-list>
-                <ion-item ng-click="addRandomByGenre(ge.short)" ng-repeat="ge in genres">
-                  <div class="genre">{{ge.display}}</div>
-                </ion-item>
-              </ion-list>
-            </ion-slide>
-            <ion-slide>
-              <p class="info">{{status.currentSong.Artist ? status.currentSong.Artist + ' - ' : ''}}{{status.currentSong.Title}}</p>
-              <div class="button-bar padding-horizontal padding-bottom">
-                <a butt="Mobius" class="button button-balanced">&infin;</a>
-                <a butt class="button button-balanced">CCast</a>
-                <a butt class="button button-balanced">Mini</a>
-                <a butt class="button button-dark">Off</a>
-              </div>
-              <div class="button-bar padding-horizontal padding-bottom">
-                <a butt class="button button-energized">0</a>
-                <a butt class="button button-energized">1</a>
-                <a butt class="button button-energized">2</a>
-                <a butt class="button button-dark">+</a>
-              </div>
-              <div class="button-bar padding-horizontal padding-bottom">
-                <a butt class="button button-energized">3</a>
-                <a butt class="button button-energized">4</a>
-                <a butt class="button button-energized">5</a>
-                <a butt class="button button-dark">-</a>
-              </div>
-              <div class="button-bar padding-horizontal padding-bottom">
-                <a butt="prev" class="button button-calm icon ion-ios7-skipbackward"></a>
-                <!--<a butt="toggle" class="button button-calm icon ion-ios7-play"></a>-->
-                <a butt="play" ng-show="!playing" class="button button-calm icon ion-ios7-play"></a>
-                <a butt="pause" ng-show="playing" class="button button-calm icon ion-ios7-pause"></a>
-                <a butt="next" class="button button-calm icon ion-ios7-skipforward"></a>
-              </div>
-              <div class="button-bar padding-horizontal padding-bottom">
-                <a butt="dnbr" class="button button-dark ion-disc"></a>
-                <a butt="this" class="button button-dark icon ion-headphone"></a>
-                <a butt="jump" class="button button-calm icon ion-forward"></a>
-                <div class="padding item item-toggle">
-                  <i class="icon ion-android-arrow-down-right" style="padding:0 80px 0 20px"></i>
-                  <label class="toggle">
-                    <input type="checkbox" ng-change="appendToggle(ap)" ng-model="ap">
-                    <div class="track">
-                      <div class="handle"></div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-              <div class="button-bar padding-horizontal padding-bottom">
-                <a butt class="button button-dark">db</a>
-                <a butt class="button button-dark">ch</a>
-                <a butt class="button button-dark">ab</a>
-                <a butt class="button button-dark">id</a>
-                <a butt class="button button-dark">ja</a>
-                <a butt class="button button-dark">te</a>
-              </div>
-              <ion-list>
-                <ion-item ng-click="play(pli.Pos)" ng-repeat="pli in status.playlist"
-                  ng-class="{active:pli.Pos===status.status.song}">
-                  <div class="playlist-item">
-                    {{pli.Artist ? pli.Artist + ' - ' : ''}}{{pli.Title}}
-                  </div>
-                </ion-item>
-              </ion-list>
-            </ion-slide>
-            <ion-slide>
-              <ion-list>
-                <ion-item ng-click="addLatest(la.dir)" ng-repeat="la in latest">
-                  <div class="stamp">{{la.formatted}}</div>
-                  <div class="dir">{{la.display}}</div>
-                </ion-item>
-              </ion-list>
-            </ion-slide>
-          </ion-slide-box>
-        </ion-content>
-      </ion-view>
+    <script id="tabs.html" type="text/ng-template">
+      <ion-tabs class="tabs-icon-top tabs-dark">
+
+        <ion-tab title="Main" icon="ion-grid" href="#/tab/main">
+          <ion-nav-view name="main-tab"></ion-nav-view>
+        </ion-tab>
+
+        <ion-tab title="Genres" icon="ion-mic-c" href="#/tab/genres">
+          <ion-nav-view name="genres-tab"></ion-nav-view>
+        </ion-tab>
+
+        <ion-tab title="Latest" icon="ion-ios7-cloud-download" href="#/tab/latest">
+          <ion-nav-view name="latest-tab"></ion-nav-view>
+        </ion-tab>
+
+        <ion-tab title="Settings" icon="ion-ios7-gear" href="#/tab/settings">
+          <ion-nav-view name="settings-tab"></ion-nav-view>
+        </ion-tab>
+
+      </ion-tabs>
+    </script>
+
+    <script id="main.html" type="text/ng-template">
+      <div class="progress" style="width:{{percent}}%"></div>
+      <p class="info">{{status.currentSong.Artist ? status.currentSong.Artist + ' - ' : ''}}{{status.currentSong.Title}}</p>
+      <div class="button-bar padding-horizontal padding-bottom">
+        <a butt="Mobius" class="button button-balanced">&infin;</a>
+        <a butt class="button button-balanced">CCast</a>
+        <a butt class="button button-balanced">Mini</a>
+        <a butt class="button button-dark">Off</a>
+      </div>
+      <div class="button-bar padding-horizontal padding-bottom">
+        <a butt class="button button-energized">0</a>
+        <a butt class="button button-energized">1</a>
+        <a butt class="button button-energized">2</a>
+        <a butt class="button button-dark">+</a>
+      </div>
+      <div class="button-bar padding-horizontal padding-bottom">
+        <a butt class="button button-energized">3</a>
+        <a butt class="button button-energized">4</a>
+        <a butt class="button button-energized">5</a>
+        <a butt class="button button-dark">-</a>
+      </div>
+      <div class="button-bar padding-horizontal padding-bottom">
+        <a butt="prev" class="button button-calm icon ion-ios7-skipbackward"></a>
+        <!--<a butt="toggle" class="button button-calm icon ion-ios7-play"></a>-->
+        <a butt="play" ng-show="!playing" class="button button-calm icon ion-ios7-play"></a>
+        <a butt="pause" ng-show="playing" class="button button-calm icon ion-ios7-pause"></a>
+        <a butt="next" class="button button-calm icon ion-ios7-skipforward"></a>
+      </div>
+      <div class="button-bar padding-horizontal padding-bottom">
+        <a butt="dnbr" class="button button-dark ion-disc"></a>
+        <a butt="this" class="button button-dark icon ion-headphone"></a>
+        <a butt="jump" class="button button-calm icon ion-forward"></a>
+        <div class="padding item item-toggle">
+          <i class="icon ion-android-arrow-down-right" style="padding:0 80px 0 20px"></i>
+          <label class="toggle">
+            <input type="checkbox" ng-change="appendToggle(ap)" ng-model="ap">
+            <div class="track">
+              <div class="handle"></div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="button-bar padding-horizontal padding-bottom">
+        <a butt class="button button-dark">db</a>
+        <a butt class="button button-dark">ch</a>
+        <a butt class="button button-dark">ab</a>
+        <a butt class="button button-dark">id</a>
+        <a butt class="button button-dark">ja</a>
+        <a butt class="button button-dark">te</a>
+      </div>
+      <ion-list>
+        <ion-item ng-click="play(pli.Pos)" ng-repeat="pli in status.playlist"
+          ng-class="{active:pli.Pos===status.status.song}">
+          <div class="playlist-item">
+            {{pli.Artist ? pli.Artist + ' - ' : ''}}{{pli.Title}}
+          </div>
+        </ion-item>
+      </ion-list>
+    </script>
+
+    <script id="genres.html" type="text/ng-template">
+      <ion-list>
+        <ion-item ng-click="addRandomByGenre(ge.short)" ng-repeat="ge in genres">
+          <div class="genre">{{ge.display}}</div>
+        </ion-item>
+      </ion-list>
+    </script>
+
+    <script id="latest.html" type="text/ng-template">
+      <ion-list>
+        <ion-item ng-click="addLatest(la.dir)" ng-repeat="la in latest">
+          <div class="stamp">{{la.formatted}}</div>
+          <div class="dir">{{la.display}}</div>
+        </ion-item>
+      </ion-list>
+    </script>
+
+    <script id="settings.html" type="text/ng-template">
+      <p>
+      Status:
+      <span ng-show="connected">connected to {{host}}</span>
+      <span ng-show="!connected">not connected</span>
+      </p>
+
+      <p>
+      <button class="button" ng-class="{'button-balanced':host=='mobius'}"
+        ng-click="connect('mobius')">Mobius</button>
+      <button class="button" ng-class="{'button-balanced':host=='pi'}"
+        ng-click="connect('pi')">Pi</button>
+      </p>
     </script>
 
   </body>

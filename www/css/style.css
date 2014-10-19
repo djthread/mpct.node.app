@@ -8699,8 +8699,10 @@ a.button {
   -webkit-transition: none !important;
   transition: none !important; }
 
+body { color: #999; }
 ion-content { background-color: #222; }
 div.item { border: 0; text-align: right; }
+div.pane { background-color: #222; }
 .item { background-color: #222; color: #eee; border-color: #333; padding: 10px; }
 .item.activated { background-color: #444; border-color: #333; }
 .stamp { font-size: x-small; float: right; color: #777; }
