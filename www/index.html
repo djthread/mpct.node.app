@@ -15,6 +15,23 @@
     <!-- ionic/angularjs js -->
     <script src="lib/ionic/js/ionic.bundle.js"></script>
 
+    <!-- socket.io, bitches -->
+    <script src="http://mobius:6601/socket.io/socket.io.js"></script>
+    <!-- <script src="js/sails.io.js"></script> -->
+    <!-- <script src="js/angular&#45;sails.js"></script> -->
+    <script>
+      // var socket = io('http://localhost:6601');
+      // socket.on('connect', function(socket) {
+      //   console.log('a user connected', socket);
+      // });
+      // socket.on('disconnect', function() {
+      //   console.log('user disconnected');
+      // });
+      // socket.on('status', function(status) {
+      //   console.log('status', status);
+      // });
+    </script>
+
     <!-- cordova script (this will be a 404 during development) -->
     <script src="cordova.js"></script>
 
@@ -59,7 +76,7 @@
               </ion-list>
             </ion-slide>
             <ion-slide>
-              <p class="info">{{status}}</p>
+              <p class="info">{{status.currentSong.Artist ? status.currentSong.Artist + ' - ' : ''}}{{status.currentSong.Title}}</p>
               <div class="button-bar padding-horizontal padding-bottom">
                 <a butt="Mobius" class="button button-balanced">&infin;</a>
                 <a butt class="button button-balanced">CCast</a>
@@ -108,10 +125,10 @@
                 <a butt class="button button-dark">te</a>
               </div>
               <ion-list>
-                <ion-item ng-click="play(pli.pos)" ng-repeat="pli in playlist"
-                  ng-class="{active:pli.display===status}">
+                <ion-item ng-click="play(pli.Pos)" ng-repeat="pli in status.playlist"
+                  ng-class="{active:pli.Pos===status.status.song}">
                   <div class="playlist-item">
-                    {{pli.display}}
+                    {{pli.Artist ? pli.Artist + ' - ' : ''}}{{pli.Title}}
                   </div>
                 </ion-item>
               </ion-list>

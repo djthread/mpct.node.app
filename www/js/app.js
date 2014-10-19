@@ -6,8 +6,20 @@
 angular.module('mpct', ['ionic'])
 
 // .constant('apiHost', 'localhost')
-.constant('apiHost', 'mobius')
-.constant('apiPort', 6601)
+.constant('defaultApiHost', 'mobius')
+.constant('hosts', {
+  mobius: {
+    hostname:   'mobius',
+    port:       6601,
+    useMarantz: false
+  },
+  pi: {
+    hostname:   'pi',
+    port:       6602,
+    useMarantz: false
+  }
+};
+
 .constant('genres', {
   am: 'Ambient',
   ab: 'Ambient Beats',
@@ -54,7 +66,10 @@ angular.module('mpct', ['ionic'])
   $urlRouterProvider.otherwise('/panel');
 })
 
-.run(function($ionicPlatform) {
+.run(function($ionicPlatform, api) {
+
+  api.connect();
+
   $ionicPlatform.ready(function() {
     // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
     // for form inputs)
@@ -73,12 +88,49 @@ angular.module('mpct', ['ionic'])
     // return cordova.exec(success, fail, "OrientationLock", "lock", [orientation])
     // var fn = function(o){alert('OL: '+o);};
     // cordova.exec(fn, fn, 'OrientationLock', 'lock', ['portrait']);
+
   });
 })
 
-.factory('api', function($http, apiHost, apiPort) {
+.factory('api', function($rootScope, $http, hosts, defaultApiHost) {
+
+  console.log('api init');
+  $rootScope.host      = defaultApiHost;
+  $rootScope.connected = false;
+  $rootScope.useMarantz = null;
+
+  var connect = function(hostName) {
+    var host  = hosts[hostName || $rootScope.host].hostname,
+        port  = hosts[hostName || $rootScope.host].port,
+        s     = io('http://' + host + ':' + port);
+
+    s.on('connect', function() {
+      // console.log('a user connected', socket);
+      $rootScope.connected = true;
+      $rootScope.useMarantz = hosts[$rootScope.host].useMarantz;
+    });
+    s.on('disconnect', function() {
+      // console.log('user disconnected');
+      $rootScope.connected = false;
+    });
+
+    return s;
+  };
+
   return {
+    connect: connect,
     call: function(command, cb) {
+
+      // Ignore on marantz command when marantz mode is disabled
+      if (command.match(/^-z /) && !$rootScope.useMarantz) {
+        return cb();
+      }
+
+      socket.emit('command', command, function(data) {
+        if (cb) cb(data);
+      });
+
+      /*
       $http.post('http://' + apiHost + ':' + apiPort, command)
       .success(function(response) {
         // console.log('response', response);
@@ -86,6 +138,7 @@ angular.module('mpct', ['ionic'])
       }).error(function(error) {
         // alert(error);
       });
+      */
     }
   };
 })
@@ -149,7 +202,7 @@ angular.module('mpct', ['ionic'])
         if (pause) api.call('-x pause');
 
         api.call(cmd, function() {
-          $rootScope.$broadcast('shouldRefresh');
+          // $rootScope.$broadcast('shouldRefresh');
         });
       });
     }
@@ -180,24 +233,36 @@ angular.module('mpct', ['ionic'])
   }
 })
 
-// .directive('latestItem', function($rootScope, api) {
-//   return {
-//     restrict: 'A',
-//     link: function(scope, element, attributes) {
-//       element.on('click', function(
-//     }
-//   };
-// })
+.controller('PanelController', function($rootScope, $scope, $ionicScrollDelegate, $interval, api, genres, socket) {
 
-.controller('PanelController', function($rootScope, $scope, $ionicScrollDelegate, $interval, api, genres) {
+  var heartbeat;
 
   $scope.activeIndex = 1;
-  $scope.latest = [];
-  $scope.playlist = [];
-  $scope.playing = false;
-  $scope.percent = 0;
-  $scope.status = 'idle';
-  $scope.moreinfos = [];
+  $scope.latest      = [];
+
+  socket.emit('status');
+  socket.on('status', function(status) {
+    $rootScope.status = status;
+
+    var elapsed = $rootScope.status.status.elapsed;
+
+    $scope.playing = status.status.state === 'play';
+
+    var heartbeatFn = function() {
+      elapsed++;
+      $rootScope.percent = parseInt(elapsed
+        / $rootScope.status.currentSong.Time * 100);
+    };
+
+    if (heartbeat || !$scope.playing) {
+      $interval.cancel(heartbeat);
+    }
+
+    if ($scope.playing) {
+      heartbeat = $interval(heartbeatFn, 1000);
+      heartbeatFn();
+    }
+  });
 
   $scope.appendToggle = function(ap) {
     $rootScope.append = ap;
@@ -232,12 +297,13 @@ angular.module('mpct', ['ionic'])
   $scope.addRandomByGenre = function(short) {
     api.call('-z mobius');
     a = $rootScope.append ? ' -a' : '';
-    api.call('-rt ' + short + a, refresh);
+    api.call('-rt ' + short + a);
   };
 
   $scope.play = function(pos) {
+    pos = parseInt(pos);
     api.call('-z mobius');
-    api.call('-x play ' + pos, refresh);
+    api.call('-x play ' + (pos + 1));
   };
 
   $rootScope.launchClient = function() {
@@ -257,55 +323,6 @@ angular.module('mpct', ['ionic'])
       alert('an. '+er);
     });
   };
-
-  // STATUS & PLAYLIST THINGS
-  var refresh = function() {
-    var parseStatus = function(line) {
-      var m = line.match(/volume: ?([\dna%\/]+)\s+repeat: (\w+)\s+random:\s+(\w+)\s+single:\s+(\w+)\s+consume: ?(\w+)/);
-      if (m) {
-        return { volume:  m[1], repeat:  m[2], random:  m[3],
-                 single:  m[4], consume: m[5] };
-      } else {
-        return false;
-      }
-    };
-
-    var renderStatus = function(s) {
-      return 'vol: ' + s.volume + ' repeat: ' + s.repeat + ' random: '
-        + s.random + ' single: ' + s.single + ' consume: ' + s.consume;
-    };
-
-    api.call('-x status', function(out) {
-      var s;
-      out = out.trim().split("\n");
-      if (s = parseStatus(out[0])) {
-        $scope.playing = false;
-        $scope.percent = 0;
-        $scope.status = 'idle';
-        $scope.moreinfos = [renderStatus(s)];
-      } else {
-        $scope.status = out[0];
-        $scope.playing = out[1].match(/\[playing\]/);
-        var matches = out[1].match(/((\d+:\d\d)\/(\d+:\d\d)) \((\d+)%\)/);
-        $scope.percent = matches[4];
-
-        $scope.moreinfos = [matches[1] + ' ' + renderStatus(parseStatus(out[2]))];
-      }
-    });
-
-    api.call('-x playlist', function(out) {
-      $scope.playlist = [];
-      angular.forEach(out.trim().split("\n"), function(val, key) {
-        $scope.playlist.push({
-          pos:     key + 1,
-          display: val
-        });
-      });
-    });
-  };
-  $interval(refresh, 5000);
-  $rootScope.$on('shouldRefresh', refresh);
-  refresh();
 
   api.call('-l', function(response) {
     $scope.latest = response.map(function(la) {
