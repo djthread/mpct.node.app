@@ -16,7 +16,7 @@
     <script src="lib/ionic/js/ionic.bundle.js"></script>
 
     <!-- socket.io, bitches -->
-    <script src="http://mobius:6601/socket.io/socket.io.js"></script>
+    <script src="http://mobius:6602/socket.io/socket.io.js"></script>
     <!-- <script src="js/sails.io.js"></script> -->
     <!-- <script src="js/angular&#45;sails.js"></script> -->
     <script>
@@ -61,7 +61,7 @@
     <ion-nav-view animation="slide-left-right"></ion-nav-view> 
 
     <script id="tabs.html" type="text/ng-template">
-      <ion-tabs class="tabs-icon-top tabs-dark">
+      <ion-tabs class="tabs-icon-top tabs-black">
 
         <ion-tab title="Main" icon="ion-grid" href="#/tab/main">
           <ion-nav-view name="main-tab"></ion-nav-view>
@@ -175,15 +175,16 @@
       <ion-view title="Settings">
         <ion-content class="padding">
 
-          <p ng-show="connected" style="float:left">
-          <button class="button" ng-click="wipeCache()">Wipe {{host}} Cache</button>
+          <p style="height:5em">
+          <button ng-show="connected" class="button" ng-click="wipeCache()">Wipe {{host}} Cache</button>
+          &nbsp;
+          <button ng-show="connected && host === 'pi'" class="button" ng-click="poweroffPi()">Poweroff Pi</button>
           </p>
 
-          <div style="float:right">
+          <div>
             <p style="margin-top:6em;width:20em">
             Status:
-            <span ng-show="connected">connected to {{host}}</span>
-            <span ng-show="!connected">not connected</span>
+            {{connected ? '' : 'not '}}connected
             </p>
 
             <p>

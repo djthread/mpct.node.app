@@ -54,7 +54,7 @@ angular.module('mpct', ['ionic'])
   wo: 'World and New Age'
 })
 
-.config(function($stateProvider, $urlRouterProvider, $httpProvider) {
+.config(function($stateProvider, $urlRouterProvider) {
 
   $stateProvider
     .state('tabs', {
@@ -111,6 +111,8 @@ angular.module('mpct', ['ionic'])
 
 .run(function($ionicPlatform, api) {
 
+  api.connect();
+
   $ionicPlatform.ready(function() {
     // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
     // for form inputs)
@@ -133,7 +135,7 @@ angular.module('mpct', ['ionic'])
   });
 })
 
-.factory('api', function($rootScope, $http, $interval, hosts, defaultApiHost) {
+.factory('api', function($rootScope, $interval, hosts, defaultApiHost) {
   var sockets = [];
 
   console.log('api init');
@@ -149,38 +151,69 @@ angular.module('mpct', ['ionic'])
         s, heartbeat;
 
     // turn them all off
-    angular.forEach(sockets, function(so) {
-      if (so.connected) {
+    angular.forEach(Object.keys(sockets), function(sn) {
+      console.log('this one', sn, sockets[sn]);
+      if (sockets[sn].connected) {
         console.log('disconnecting..');
-        so.io.disconnect();
+        sockets[sn].io.disconnect();
       }
     });
 
-    $rootScope.connected  = null;
+    $rootScope.connected  = false;
     $rootScope.host       = null;
     $rootScope.status     = null;
 
     if (sockets[hostName]) {
       console.log('reconnecting', hostName, sockets[hostName]);
-      sockets[hostName].io.reconnect();
-      $rootScope.connected = true;
-      sockets[hostName].emit('status');
+      sockets[hostName].connect({ reconnection: false });
       return;
     }
 
     console.log('connecting...', host, port);
-    sockets[hostName] = io.connect('http://' + host + ':' + port);
+    sockets[hostName] = io.connect(
+      'http://' + host + ':' + port,
+      { reconnection: false }
+    );
 
-    console.log('s', sockets[hostName]);
+    sockets[hostName].on('reconnection', function(attemptNum) {
+      console.log('reconnect!');
+    });
 
-    sockets[hostName].emit('status');
+    (function() {
+      var hn = hostName;
+      sockets[hn].on('disconnect', function() {
+        console.log('disconnected', hn);
+        $rootScope.connected = false;
+        $rootScope.host      = null;
+      });
+    })();
 
     sockets[hostName].on('connect', function() {
       console.log('connected', sockets[hostName]);
-      $rootScope.connected = true;
+      $rootScope.connected  = true;
       $rootScope.host       = hostName;
       $rootScope.useMarantz = hosts[hostName].useMarantz;
       $rootScope.latest     = [];
+      sockets[hostName].emit('status');
+      console.log('rootscope',$rootScope);
+
+      $rootScope.$apply();
+
+      call('-l -c 50', function(response) {
+        $rootScope.latest = response.map(function(la) {
+          var d = new Date(la.lm);
+          la.formatted = d.getMonth() + '-' + d.getDate();
+          la.display = la.dir.replace(/^tmp\/stage5\//, '')
+            .replace(/^Chill Out and Dub\//, 'Chill/')
+            .replace(/^Drum 'n Bass\//, 'DnB/');
+          return la;
+        });
+      });
+
+      // Don't double-hook event handlers
+      if (sockets[hostName].hooked) return;
+
+      sockets[hostName].hooked = true;
 
       sockets[hostName].on('status', function(status) {
         console.log('got status', status);
@@ -200,7 +233,7 @@ angular.module('mpct', ['ionic'])
           }
         };
 
-        if (heartbeat || !$rootScope.playing) {
+        if (heartbeat) {
           $interval.cancel(heartbeat);
         }
 
@@ -209,30 +242,13 @@ angular.module('mpct', ['ionic'])
           heartbeatFn();
         }
       });
-
-      console.log('call -l -c 50');
-      call('-l -c 50', function(response) {
-        console.log('hai', response);
-        $rootScope.latest = response.map(function(la) {
-          var d = new Date(la.lm);
-          la.formatted = d.getMonth() + '-' + d.getDate();
-          la.display = la.dir.replace(/^tmp\/stage5\//, '')
-            .replace(/^Chill Out and Dub\//, 'Chill/')
-            .replace(/^Drum 'n Bass\//, 'DnB/');
-          return la;
-        });
-      });
-    });
-
-    sockets[hostName].on('disconnect', function() {
-      console.log('disconnected');
-      $rootScope.connected = false;
     });
   };
 
   var call = function(command, cb) {
 
     if (!sockets[$rootScope.host].connected) {
+      console.log('not connected. skipping', command);
       return;
     }
 
@@ -242,24 +258,13 @@ angular.module('mpct', ['ionic'])
       return;
     }
 
-    console.log('emitting command', command);
+    console.log('emitting command to ' + $rootScope.host + ':', command, sockets[$rootScope.host].io.uri);
     sockets[$rootScope.host].emit('command', command, function(data) {
       console.log('data', data);
       if (cb) cb(data);
     });
 
-    /*
-    $http.post('http://' + apiHost + ':' + apiPort, command)
-    .success(function(response) {
-      // console.log('response', response);
-      if (cb) cb(response);
-    }).error(function(error) {
-      // alert(error);
-    });
-    */
   };
-
-  connect();
 
   return {
     connect: connect,
