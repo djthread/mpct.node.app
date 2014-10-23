@@ -228,8 +228,6 @@ angular.module('mpct', ['ionic'])
         $rootScope.latest     = [];
         sockets[hn].emit('status');
 
-        $rootScope.$apply();
-
         call('-l -c 50', function(response) {
           $rootScope.latest = response.map(function(la) {
             var d = new Date(la.lm);
@@ -239,6 +237,7 @@ angular.module('mpct', ['ionic'])
               .replace(/^Drum 'n Bass\//, 'DnB/');
             return la;
           });
+          $rootScope.$apply();
         });
 
         // Don't double-hook event handlers
@@ -272,6 +271,8 @@ angular.module('mpct', ['ionic'])
             heartbeat = $interval(heartbeatFn, 1000);
             heartbeatFn();
           }
+
+          $rootScope.$apply();
         });
       });
     })();
