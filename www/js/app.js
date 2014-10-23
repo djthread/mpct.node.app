@@ -135,8 +135,35 @@ angular.module('mpct', ['ionic'])
   });
 })
 
-.factory('api', function($rootScope, $interval, hosts, defaultApiHost) {
-  var sockets = [];
+.factory('persister', function($interval) {
+  var reconnectInterval;
+
+  // Manage my own auto-reconnect since I want to have multiple sockets,
+  // potentially, and thus I can't use the stock reconnection feature.
+  var persist = function(socket) {
+    endPersist();
+    reconnectInterval = $interval(function() {
+      if (socket.connected) return;
+      socket.connect({reconnection: false});
+    }, 2000);
+  };
+
+  var endPersist = function() {
+    $interval.cancel(reconnectInterval);
+  };
+
+  return {
+    persist:    persist,
+    endPersist: endPersist
+  };
+})
+
+.factory('api', function($rootScope, $interval, hosts, defaultApiHost, persister) {
+  var heartbeat, sockets = [];
+
+  if (heartbeat) {
+    $interval.cancel(heartbeat);
+  }
 
   console.log('api init');
   $rootScope.host       = defaultApiHost;
@@ -148,11 +175,10 @@ angular.module('mpct', ['ionic'])
 
     var host = hosts[hostName].hostname,
         port = hosts[hostName].port,
-        s, heartbeat;
+        s;
 
     // turn them all off
     angular.forEach(Object.keys(sockets), function(sn) {
-      console.log('this one', sn, sockets[sn]);
       if (sockets[sn].connected) {
         console.log('disconnecting..');
         sockets[sn].io.disconnect();
@@ -163,86 +189,92 @@ angular.module('mpct', ['ionic'])
     $rootScope.host       = null;
     $rootScope.status     = null;
 
-    if (sockets[hostName]) {
-      console.log('reconnecting', hostName, sockets[hostName]);
-      sockets[hostName].connect({ reconnection: false });
-      return;
-    }
-
-    console.log('connecting...', host, port);
-    sockets[hostName] = io.connect(
-      'http://' + host + ':' + port,
-      { reconnection: false }
-    );
-
-    sockets[hostName].on('reconnection', function(attemptNum) {
-      console.log('reconnect!');
-    });
-
     (function() {
       var hn = hostName;
+
+      if (sockets[hn]) {
+        console.log('reconnecting', hn, sockets[hn]);
+        sockets[hn].connect({ reconnection: false });
+        return;
+      }
+
+      console.log('connecting...', host, port);
+      sockets[hn] = io.connect(
+        'http://' + host + ':' + port,
+        { reconnection: false }
+      );
+
+      sockets[hn].on('reconnection', function(attemptNum) {
+        console.log('reconnect!');
+      });
+
+      sockets[hn].on('connect_error', function(err) {
+        persister.persist(sockets[hn]);
+      });
+
       sockets[hn].on('disconnect', function() {
+        persister.persist(sockets[hn]);
         console.log('disconnected', hn);
         $rootScope.connected = false;
         $rootScope.host      = null;
       });
-    })();
 
-    sockets[hostName].on('connect', function() {
-      console.log('connected', sockets[hostName]);
-      $rootScope.connected  = true;
-      $rootScope.host       = hostName;
-      $rootScope.useMarantz = hosts[hostName].useMarantz;
-      $rootScope.latest     = [];
-      sockets[hostName].emit('status');
-      console.log('rootscope',$rootScope);
+      sockets[hn].on('connect', function() {
+        console.log('connected', sockets[hn]);
+        persister.endPersist();
+        $rootScope.connected  = true;
+        $rootScope.host       = hn;
+        $rootScope.useMarantz = hosts[hn].useMarantz;
+        $rootScope.latest     = [];
+        sockets[hn].emit('status');
 
-      $rootScope.$apply();
+        $rootScope.$apply();
 
-      call('-l -c 50', function(response) {
-        $rootScope.latest = response.map(function(la) {
-          var d = new Date(la.lm);
-          la.formatted = d.getMonth() + '-' + d.getDate();
-          la.display = la.dir.replace(/^tmp\/stage5\//, '')
-            .replace(/^Chill Out and Dub\//, 'Chill/')
-            .replace(/^Drum 'n Bass\//, 'DnB/');
-          return la;
+        call('-l -c 50', function(response) {
+          $rootScope.latest = response.map(function(la) {
+            var d = new Date(la.lm);
+            la.formatted = d.getMonth() + '-' + d.getDate();
+            la.display = la.dir.replace(/^tmp\/stage5\//, '')
+              .replace(/^Chill Out and Dub\//, 'Chill/')
+              .replace(/^Drum 'n Bass\//, 'DnB/');
+            return la;
+          });
+        });
+
+        // Don't double-hook event handlers
+        if (sockets[hn].hooked) return;
+
+        sockets[hn].hooked = true;
+
+        sockets[hn].on('status', function(status) {
+          console.log('got status', status);
+          $rootScope.status = status;
+
+          var elapsed = $rootScope.status.status.elapsed;
+
+          $rootScope.playing = status.status.state === 'play';
+
+          var heartbeatFn = function() {
+            if ($rootScope.status && $rootScope.status.currentSong) {
+              elapsed++;
+              $rootScope.percent = parseInt(elapsed
+                / $rootScope.status.currentSong.Time * 100);
+            } else {
+              $rootScope.percent = 0;
+            }
+          };
+
+          if (heartbeat) {
+            $interval.cancel(heartbeat);
+          }
+
+          if ($rootScope.playing) {
+            heartbeat = $interval(heartbeatFn, 1000);
+            heartbeatFn();
+          }
         });
       });
-
-      // Don't double-hook event handlers
-      if (sockets[hostName].hooked) return;
-
-      sockets[hostName].hooked = true;
-
-      sockets[hostName].on('status', function(status) {
-        console.log('got status', status);
-        $rootScope.status = status;
-
-        var elapsed = $rootScope.status.status.elapsed;
-
-        $rootScope.playing = status.status.state === 'play';
-
-        var heartbeatFn = function() {
-          if ($rootScope.status && $rootScope.status.currentSong) {
-            elapsed++;
-            $rootScope.percent = parseInt(elapsed
-              / $rootScope.status.currentSong.Time * 100);
-          } else {
-            $rootScope.percent = 0;
-          }
-        };
-
-        if (heartbeat) {
-          $interval.cancel(heartbeat);
-        }
-
-        if ($rootScope.playing) {
-          heartbeat = $interval(heartbeatFn, 1000);
-          heartbeatFn();
-        }
-      });
-    });
+    })();
   };
 
   var call = function(command, cb) {
