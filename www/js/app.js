@@ -449,12 +449,16 @@ angular.module('mpct', ['ionic'])
   };
 })
 
-.controller('SettingsController', function($rootScope, $scope, api) {
+.controller('SettingsController', function($rootScope, $scope, $http, api, persister) {
   $scope.connect = function(host) {
     api.connect(host);
   };
   $scope.wipeCache = function() {
     api.call('-w');
+  };
+  $scope.poweroffPi = function() {
+    $http.get('http://192.168.0.20:3333');
+    persister.endPersist();
   };
 });
 
