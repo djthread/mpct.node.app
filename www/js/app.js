@@ -6,16 +6,21 @@
 angular.module('mpct', ['ionic'])
 
 // .constant('apiHost', 'localhost')
-.constant('defaultApiHost', 'mobius')
+.constant('defaultApiHost', 'thmbp')
 .constant('hosts', {
   mobius: {
-    hostname:   'mobius',
+    hostname:   '192.168.0.10',
     port:       6601,
     useMarantz: true
   },
   pi: {
-    hostname:   'mobius',
+    hostname:   '192.168.0.10',
     port:       6602,
+    useMarantz: false
+  },
+  thmbp: {
+    hostname:   '192.168.0.10',
+    port:       6603,
     useMarantz: false
   }
 })
@@ -144,6 +149,7 @@ angular.module('mpct', ['ionic'])
     endPersist();
     reconnectInterval = $interval(function() {
       if (socket.connected) return;
+      if (!socket) return;
       socket.connect({reconnection: false});
     }, 2000);
   };
@@ -158,129 +164,128 @@ angular.module('mpct', ['ionic'])
   };
 })
 
-.factory('api', function($rootScope, $interval, hosts, defaultApiHost, persister) {
-  var heartbeat, sockets = [];
+.factory('cop', function($rootScope, $interval, persister, hosts, defaultApiHost) {
+  var socket;
 
-  if (heartbeat) {
-    $interval.cancel(heartbeat);
-  }
+  var disconnect = function() {
+    if (socket && socket.connected) socket.io.disconnect();
+    if (socket && socket.io) delete socket.io;
+    socket = null;
+    $rootScope.connected = false;
+    $rootScope.host      = null;
+    persister.endPersist();
+  };
 
-  console.log('api init');
-  $rootScope.host       = defaultApiHost;
-  $rootScope.connected  = false;
-  $rootScope.useMarantz = null;
-
-  var connect = function(hostName) {
-    hostName = hostName || $rootScope.host;
+  var connect = function(hostName, cb) {
+    if (typeof hostName === 'undefined') {
+      hostName = defaultApiHost;
+    }
 
     var host = hosts[hostName].hostname,
-        port = hosts[hostName].port,
-        s;
+        port = hosts[hostName].port;
 
-    // turn them all off
-    angular.forEach(Object.keys(sockets), function(sn) {
-      if (sockets[sn].connected) {
-        console.log('disconnecting..');
-        sockets[sn].io.disconnect();
-      }
+    disconnect();
+
+    console.log('connecting...', host, port);
+    socket = io.connect('http://' + host + ':' + port, {reconnection: false});
+
+    socket.on('reconnection', function(attemptNum) {
+      console.log('reconnect!', $rootScope.host);
     });
 
-    $rootScope.connected  = false;
-    $rootScope.host       = null;
-    $rootScope.status     = null;
+    socket.on('connect_error', function(err) {
+      console.log('connect_error', $rootScope.host);
+      // persister.persist(sockets[hn]);
+    });
 
-    (function() {
-      var hn = hostName;
+    socket.on('disconnect', function() {
+      console.log('disconnected', $rootScope.host);
+      disconnect();
+    });
 
-      if (sockets[hn]) {
-        console.log('reconnecting', hn, sockets[hn]);
-        sockets[hn].connect({ reconnection: false });
-        return;
-      }
+    socket.on('connect', function() {
+      persister.persist(socket);
 
-      console.log('connecting...', host, port);
-      sockets[hn] = io.connect(
-        'http://' + host + ':' + port,
-        { reconnection: false }
-      );
+      $rootScope.connected  = true;
+      $rootScope.host       = hostName;
+      $rootScope.useMarantz = hosts[hostName].useMarantz;
+      console.log('connected', $rootScope.host);
 
-      sockets[hn].on('reconnection', function(attemptNum) {
-        console.log('reconnect!');
-      });
+      if (cb) cb(socket);
+    });
+  };
 
-      sockets[hn].on('connect_error', function(err) {
-        persister.persist(sockets[hn]);
-      });
+  return {
+    connect:    connect,
+    disconnect: disconnect
+  };
+})
 
-      sockets[hn].on('disconnect', function() {
-        persister.persist(sockets[hn]);
-        console.log('disconnected', hn);
-        $rootScope.connected = false;
-        $rootScope.host      = null;
-      });
+.factory('api', function($rootScope, $interval, hosts, cop) {
 
-      sockets[hn].on('connect', function() {
-        console.log('connected', sockets[hn]);
-        persister.endPersist();
-        $rootScope.connected  = true;
-        $rootScope.host       = hn;
-        $rootScope.useMarantz = hosts[hn].useMarantz;
-        $rootScope.latest     = [];
-        sockets[hn].emit('status');
+  var socket;
 
-        call('-l -c 50', function(response) {
-          $rootScope.latest = response.map(function(la) {
-            var d = new Date(la.lm);
-            la.formatted = d.getMonth() + '-' + d.getDate();
-            la.display = la.dir.replace(/^tmp\/stage5\//, '')
-              .replace(/^Chill Out and Dub\//, 'Chill/')
-              .replace(/^Drum 'n Bass\//, 'DnB/');
-            return la;
-          });
-          $rootScope.$apply();
+  var connect = function(hostName) {
+    var heartbeat;
+
+    if (heartbeat) {
+      $interval.cancel(heartbeat);
+    }
+
+    $rootScope.status = null;
+    $rootScope.latest = [];
+
+    cop.connect(hostName, function(s) {
+      socket = s;
+
+      socket.emit('status');
+
+      call('-l -c 50', function(response) {
+        $rootScope.latest = response.map(function(la) {
+          var d = new Date(la.lm);
+          la.formatted = d.getMonth() + '-' + d.getDate();
+          la.display = la.dir.replace(/^tmp\/stage5\//, '')
+            .replace(/^Chill Out and Dub\//, 'Chill/')
+            .replace(/^Drum 'n Bass\//, 'DnB/');
+          return la;
         });
-
-        // Don't double-hook event handlers
-        if (sockets[hn].hooked) return;
-
-        sockets[hn].hooked = true;
-
-        sockets[hn].on('status', function(status) {
-          console.log('got status', status);
-          $rootScope.status = status;
-
-          var elapsed = $rootScope.status.status.elapsed;
-
-          $rootScope.playing = status.status.state === 'play';
-
-          var heartbeatFn = function() {
-            if ($rootScope.status && $rootScope.status.currentSong) {
-              elapsed++;
-              $rootScope.percent = parseInt(elapsed
-                / $rootScope.status.currentSong.Time * 100);
-            } else {
-              $rootScope.percent = 0;
-            }
-          };
-
-          if (heartbeat) {
-            $interval.cancel(heartbeat);
-          }
-
-          if ($rootScope.playing) {
-            heartbeat = $interval(heartbeatFn, 1000);
-            heartbeatFn();
-          }
-
-          $rootScope.$apply();
-        });
+        $rootScope.$apply();
       });
-    })();
+
+      socket.on('status', function(status) {
+        console.log('got status', status);
+        $rootScope.status = status;
+
+        var elapsed = $rootScope.status.status.elapsed;
+
+        $rootScope.playing = status.status.state === 'play';
+
+        var heartbeatFn = function() {
+          if ($rootScope.status && $rootScope.status.currentSong) {
+            elapsed++;
+            $rootScope.percent = parseInt(elapsed
+              / $rootScope.status.currentSong.Time * 100);
+          } else {
+            $rootScope.percent = 0;
+          }
+        };
+
+        if (heartbeat) $interval.cancel(heartbeat);
+
+        if ($rootScope.playing) {
+          heartbeat = $interval(heartbeatFn, 1000);
+          heartbeatFn();
+        }
+
+        $rootScope.$apply();
+      });
+    });
+
   };
 
   var call = function(command, cb) {
 
-    if (!sockets[$rootScope.host].connected) {
+    if (!socket.connected) {
       console.log('not connected. skipping', command);
       return;
     }
@@ -291,8 +296,8 @@ angular.module('mpct', ['ionic'])
       return;
     }
 
-    console.log('emitting command to ' + $rootScope.host + ':', command, sockets[$rootScope.host].io.uri);
-    sockets[$rootScope.host].emit('command', command, function(data) {
+    console.log('emitting command to ' + $rootScope.host + ':', command);
+    socket.emit('command', command, function(data) {
       console.log('data', data);
       if (cb) cb(data);
     });
