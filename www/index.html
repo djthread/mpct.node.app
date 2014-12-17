@@ -55,7 +55,7 @@
       <ion-nav-back-button class="button-icon ion-arrow-left-c">
       </ion-nav-back-button>
       <ion-nav-buttons side="right">
-        <button class="button ion-android-volume" ng-click="launchClient()"></button>
+        <button class="button ion-ionic" ng-click="toggleServer()"></button>
       </ion-nav-buttons>
     </ion-nav-bar>
 
@@ -84,23 +84,23 @@
     </script>
 
     <script id="main.html" type="text/ng-template">
-      <ion-view title="Main">
+      <ion-view title="{{host || ''}}">
         <ion-content>
           <div class="progress" style="width:{{percent || 0}}%"></div>
           <p class="info">{{(status.currentSong.Artist ? status.currentSong.Artist + ' - ' : '') + status.currentSong.Title || 'idle'}}</p>
-          <div class="button-bar padding-horizontal padding-bottom">
+          <div class="button-bar padding-horizontal padding-bottom" ng-show="useMarantz">
             <a butt="Mobius" class="button button-balanced">&infin;</a>
             <a butt class="button button-balanced">CCast</a>
             <a butt class="button button-balanced">Mini</a>
             <a butt class="button button-dark">Off</a>
           </div>
-          <div class="button-bar padding-horizontal padding-bottom">
+          <div class="button-bar padding-horizontal padding-bottom" ng-show="useMarantz">
             <a butt class="button button-energized">0</a>
             <a butt class="button button-energized">1</a>
             <a butt class="button button-energized">2</a>
             <a butt class="button button-dark">+</a>
           </div>
-          <div class="button-bar padding-horizontal padding-bottom">
+          <div class="button-bar padding-horizontal padding-bottom" ng-show="useMarantz">
             <a butt class="button button-energized">3</a>
             <a butt class="button button-energized">4</a>
             <a butt class="button button-energized">5</a>

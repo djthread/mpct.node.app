@@ -6,7 +6,7 @@
 angular.module('mpct', ['ionic'])
 
 // .constant('apiHost', 'localhost')
-.constant('defaultApiHost', 'thmbp')
+.constant('defaultApiHost', 'mobius')
 .constant('hosts', {
   mobius: {
     hostname:   '192.168.0.10',
@@ -114,11 +114,22 @@ angular.module('mpct', ['ionic'])
   $urlRouterProvider.otherwise('/tab/main');
 })
 
-.run(function($ionicPlatform, api) {
+.run(function($rootScope, $ionicPlatform, api) {
 
   api.connect();
 
   $ionicPlatform.ready(function() {
+    $rootScope.toggleServer = function() {
+      if ($rootScope.host === 'mobius') {
+        api.connect('thmbp');
+      } else if ($rootScope.host === 'thmbp') {
+        api.connect('mobius');
+      } else if ($rootScope.host === 'pi') {
+        api.connect('mobius');
+      } else {
+        api.connect();
+      }
+    };
     // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
     // for form inputs)
     // if(window.cordova && window.cordova.plugins.Keyboard) {
@@ -140,40 +151,17 @@ angular.module('mpct', ['ionic'])
   });
 })
 
-.factory('persister', function($interval) {
-  var reconnectInterval;
-
-  // Manage my own auto-reconnect since I want to have multiple sockets,
-  // potentially, and thus I can't use the stock reconnection feature.
-  var persist = function(socket) {
-    endPersist();
-    reconnectInterval = $interval(function() {
-      if (socket.connected) return;
-      if (!socket) return;
-      socket.connect({reconnection: false});
-    }, 2000);
-  };
-
-  var endPersist = function() {
-    $interval.cancel(reconnectInterval);
-  };
-
-  return {
-    persist:    persist,
-    endPersist: endPersist
-  };
-})
-
-.factory('cop', function($rootScope, $interval, persister, hosts, defaultApiHost) {
+.factory('cop', function($rootScope, $interval, hosts, defaultApiHost) {
   var socket;
 
   var disconnect = function() {
     if (socket && socket.connected) socket.io.disconnect();
-    if (socket && socket.io) delete socket.io;
-    socket = null;
-    $rootScope.connected = false;
+    // if (socket && socket.io) delete socket.io;
+    // socket               = null;
     $rootScope.host      = null;
-    persister.endPersist();
+    $rootScope.connected = false;
+    $rootScope.playing   = false;
+    $rootScope.status    = null;
   };
 
   var connect = function(hostName, cb) {
@@ -187,15 +175,18 @@ angular.module('mpct', ['ionic'])
     disconnect();
 
     console.log('connecting...', host, port);
-    socket = io.connect('http://' + host + ':' + port, {reconnection: false});
+    socket = io.connect('http://' + host + ':' + port, {
+      // reconnection: false,
+      forceNew:     true
+    });
 
     socket.on('reconnection', function(attemptNum) {
       console.log('reconnect!', $rootScope.host);
+      // socket.emit('status');
     });
 
     socket.on('connect_error', function(err) {
       console.log('connect_error', $rootScope.host);
-      // persister.persist(sockets[hn]);
     });
 
     socket.on('disconnect', function() {
@@ -204,8 +195,6 @@ angular.module('mpct', ['ionic'])
     });
 
     socket.on('connect', function() {
-      persister.persist(socket);
-
       $rootScope.connected  = true;
       $rootScope.host       = hostName;
       $rootScope.useMarantz = hosts[hostName].useMarantz;
@@ -223,24 +212,34 @@ angular.module('mpct', ['ionic'])
 
 .factory('api', function($rootScope, $interval, hosts, cop) {
 
-  var socket;
+  var socket, heartbeat;
 
   var connect = function(hostName) {
-    var heartbeat;
+    var elapsed;
 
-    if (heartbeat) {
-      $interval.cancel(heartbeat);
-    }
+    if (heartbeat) $interval.cancel(heartbeat);
 
-    $rootScope.status = null;
-    $rootScope.latest = [];
+    $rootScope.useMarantz = false;
+    $rootScope.playing    = false;
+    $rootScope.status     = null;
+    $rootScope.latest     = [];
+
+    var heartbeatFn = function() {
+      if ($rootScope.status && $rootScope.status.currentSong) {
+        elapsed++;
+        $rootScope.percent = parseInt(elapsed
+          / $rootScope.status.currentSong.Time * 100);
+      } else {
+        $rootScope.percent = 0;
+      }
+    };
 
     cop.connect(hostName, function(s) {
       socket = s;
 
       socket.emit('status');
 
-      call('-l -c 50', function(response) {
+      call('-l -c 200', function(response) {
         $rootScope.latest = response.map(function(la) {
           var d = new Date(la.lm);
           la.formatted = d.getMonth() + '-' + d.getDate();
@@ -254,21 +253,11 @@ angular.module('mpct', ['ionic'])
 
       socket.on('status', function(status) {
         console.log('got status', status);
-        $rootScope.status = status;
 
-        var elapsed = $rootScope.status.status.elapsed;
-
+        $rootScope.status  = status;
         $rootScope.playing = status.status.state === 'play';
 
-        var heartbeatFn = function() {
-          if ($rootScope.status && $rootScope.status.currentSong) {
-            elapsed++;
-            $rootScope.percent = parseInt(elapsed
-              / $rootScope.status.currentSong.Time * 100);
-          } else {
-            $rootScope.percent = 0;
-          }
-        };
+        elapsed = $rootScope.status.status.elapsed;
 
         if (heartbeat) $interval.cancel(heartbeat);
 
@@ -298,7 +287,7 @@ angular.module('mpct', ['ionic'])
 
     console.log('emitting command to ' + $rootScope.host + ':', command);
     socket.emit('command', command, function(data) {
-      console.log('data', data);
+      // console.log('data', data);
       if (cb) cb(data);
     });
 
@@ -454,7 +443,7 @@ angular.module('mpct', ['ionic'])
   };
 })
 
-.controller('SettingsController', function($rootScope, $scope, $http, api, persister) {
+.controller('SettingsController', function($rootScope, $scope, $http, api) {
   $scope.connect = function(host) {
     api.connect(host);
   };
@@ -463,7 +452,6 @@ angular.module('mpct', ['ionic'])
   };
   $scope.poweroffPi = function() {
     $http.get('http://192.168.0.20:3333');
-    persister.endPersist();
   };
 });
 
