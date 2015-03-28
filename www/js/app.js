@@ -25,6 +25,9 @@ angular.module('mpct', ['ionic'])
   }
 })
 
+// Command to activate mobius
+.constant('zmobius', '-z optical')
+
 .constant('genres', {
   am: 'Ambient',
   ab: 'Ambient Beats',
@@ -299,7 +302,7 @@ angular.module('mpct', ['ionic'])
   };
 })
 
-.directive('butt', function($rootScope, api) {
+.directive('butt', function($rootScope, api, zmobius) {
   return {
     restrict: 'A',
     link: function(scope, element, attributes) {
@@ -313,7 +316,7 @@ angular.module('mpct', ['ionic'])
           a      = $rootScope.append ? ' -a' : '';
 
         switch (key) {
-          case 'Mobius':   cmd = '-z mobius';   break;
+          case 'Mobius':   cmd = zmobius;       break;
           case 'CCast':    cmd = '-z ccast';    break;
           case 'Mini':     cmd = '-z mini';     break;
           case 'Off':      cmd = '-z pwoff';    pause = true; break;
@@ -346,7 +349,7 @@ angular.module('mpct', ['ionic'])
         }
 
         if (key === 'dnbr' && !a) {
-          api.call('-z mobius');
+          api.call(zmobius);
           api.call('-x clear', function() {
             api.call(cmd, function() {
               api.call('-x play');
@@ -355,7 +358,7 @@ angular.module('mpct', ['ionic'])
           return;
         }
 
-        if (wake) api.call('-z mobius');
+        if (wake) api.call(zmobius);
 
         if (pause) api.call('-x pause');
 
@@ -391,7 +394,7 @@ angular.module('mpct', ['ionic'])
   }
 })
 
-.controller('MainController', function($rootScope, $scope, $ionicScrollDelegate, api) {
+.controller('MainController', function($rootScope, $scope, $ionicScrollDelegate, api, zmobius) {
 
   $scope.appendToggle = function(ap) {
     $rootScope.append = ap;
@@ -403,13 +406,13 @@ angular.module('mpct', ['ionic'])
 
   $scope.play = function(pos) {
     pos = parseInt(pos);
-    api.call('-z mobius');
+    api.call(zmobius);
     api.call('-x play ' + (pos + 1));
   };
 
 })
 
-.controller('GenresController', function($rootScope, $scope, api, genres) {
+.controller('GenresController', function($rootScope, $scope, api, genres, zmobius) {
 
   $scope.genres = [];
   angular.forEach(genres, function(val, key) {
@@ -420,7 +423,7 @@ angular.module('mpct', ['ionic'])
   });
 
   $scope.addRandomByGenre = function(short) {
-    api.call('-z mobius');
+    api.call(zmobius);
     a = $rootScope.append ? ' -a' : '';
     api.call('-rt ' + short + a);
   };
@@ -451,7 +454,7 @@ angular.module('mpct', ['ionic'])
     api.call('-w');
   };
   $scope.poweroffPi = function() {
-    $http.get('http://192.168.0.20:3333');
+    $http.get('http://192.168.0.250:3333');
   };
 });
 
