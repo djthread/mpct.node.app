@@ -26,7 +26,7 @@ angular.module('mpct', ['ionic'])
 })
 
 // Command to activate mobius
-.constant('zmobius', '-z optical')
+.constant('zmobius', '-z bluray')
 
 .constant('genres', {
   am: 'Ambient',
