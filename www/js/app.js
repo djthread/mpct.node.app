@@ -155,16 +155,23 @@ angular.module('mpct', ['ionic'])
 })
 
 .factory('cop', function($rootScope, $interval, hosts, defaultApiHost) {
-  var socket;
+  var socket, hooks = {};
 
-  var disconnect = function() {
+  var disconnect = function(attemptReconnect) {
     if (socket && socket.connected) socket.io.disconnect();
     // if (socket && socket.io) delete socket.io;
+    var host = $rootScope.host;
+
     // socket               = null;
     $rootScope.host      = null;
     $rootScope.connected = false;
     $rootScope.playing   = false;
     $rootScope.status    = null;
+
+    if (host && attemptReconnect) {
+      console.log('reconnecting!!!!!1');
+      connect(host);
+    }
   };
 
   var connect = function(hostName, cb) {
@@ -184,17 +191,18 @@ angular.module('mpct', ['ionic'])
     });
 
     socket.on('reconnection', function(attemptNum) {
-      console.log('reconnect!', $rootScope.host);
+      alert('reconnect! ' + $rootScope.host);
       // socket.emit('status');
     });
 
     socket.on('connect_error', function(err) {
-      console.log('connect_error', $rootScope.host);
+      alert('connect_error ' + $rootScope.host + ': ' + err);
     });
 
     socket.on('disconnect', function() {
-      console.log('disconnected', $rootScope.host);
-      disconnect();
+      console.log('disconnected ' + $rootScope.host);
+      $rootScope.host = null;
+      disconnect(true);
     });
 
     socket.on('connect', function() {
@@ -203,11 +211,19 @@ angular.module('mpct', ['ionic'])
       $rootScope.useMarantz = hosts[hostName].useMarantz;
       console.log('connected', $rootScope.host);
 
+      (hooks.connect || []).forEach(function(hook) { hook(socket); });
+
       if (cb) cb(socket);
     });
   };
 
+  var on = function(signal, fn) {
+      if (!hooks[signal]) hooks[signal] = [];
+      hooks[signal].push(fn);
+  };
+
   return {
+    on:         on,
     connect:    connect,
     disconnect: disconnect
   };
@@ -215,11 +231,19 @@ angular.module('mpct', ['ionic'])
 
 .factory('api', function($rootScope, $interval, hosts, cop) {
 
-  var socket, heartbeat;
+  var socket, heartbeat, elapsed;
+
+  var heartbeatFn = function() {
+    if ($rootScope.status && $rootScope.status.currentSong) {
+      elapsed++;
+      $rootScope.percent = parseInt(elapsed
+        / $rootScope.status.currentSong.Time * 100);
+    } else {
+      $rootScope.percent = 0;
+    }
+  };
 
   var connect = function(hostName) {
-    var elapsed;
-
     if (heartbeat) $interval.cancel(heartbeat);
 
     $rootScope.useMarantz = false;
@@ -227,56 +251,10 @@ angular.module('mpct', ['ionic'])
     $rootScope.status     = null;
     $rootScope.latest     = [];
 
-    var heartbeatFn = function() {
-      if ($rootScope.status && $rootScope.status.currentSong) {
-        elapsed++;
-        $rootScope.percent = parseInt(elapsed
-          / $rootScope.status.currentSong.Time * 100);
-      } else {
-        $rootScope.percent = 0;
-      }
-    };
-
-    cop.connect(hostName, function(s) {
-      socket = s;
-
-      socket.emit('status');
-
-      call('-l -c 200', function(response) {
-        $rootScope.latest = response.map(function(la) {
-          var d = new Date(la.lm);
-          la.formatted = d.getMonth() + '-' + d.getDate();
-          la.display = la.dir.replace(/^tmp\/stage5\//, '')
-            .replace(/^Chill Out and Dub\//, 'Chill/')
-            .replace(/^Drum 'n Bass\//, 'DnB/');
-          return la;
-        });
-        $rootScope.$apply();
-      });
-
-      socket.on('status', function(status) {
-        console.log('got status', status);
-
-        $rootScope.status  = status;
-        $rootScope.playing = status.status.state === 'play';
-
-        elapsed = $rootScope.status.status.elapsed;
-
-        if (heartbeat) $interval.cancel(heartbeat);
-
-        if ($rootScope.playing) {
-          heartbeat = $interval(heartbeatFn, 1000);
-          heartbeatFn();
-        }
-
-        $rootScope.$apply();
-      });
-    });
-
+    cop.connect(hostName);
   };
 
   var call = function(command, cb) {
-
     if (!socket.connected) {
       console.log('not connected. skipping', command);
       return;
@@ -293,8 +271,43 @@ angular.module('mpct', ['ionic'])
       // console.log('data', data);
       if (cb) cb(data);
     });
-
   };
+
+  cop.on('connect', function(s) {
+    socket = s;
+
+    socket.emit('status');
+
+    call('-l -c 200', function(response) {
+      $rootScope.latest = response.map(function(la) {
+        var d = new Date(la.lm);
+        la.formatted = d.getMonth() + '-' + d.getDate();
+        la.display = la.dir.replace(/^tmp\/stage5\//, '')
+          .replace(/^Chill Out and Dub\//, 'Chill/')
+          .replace(/^Drum 'n Bass\//, 'DnB/');
+        return la;
+      });
+      $rootScope.$apply();
+    });
+
+    socket.on('status', function(status) {
+      console.log('got status', status);
+
+      $rootScope.status  = status;
+      $rootScope.playing = status.status.state === 'play';
+
+      elapsed = $rootScope.status.status.elapsed;
+
+      if (heartbeat) $interval.cancel(heartbeat);
+
+      if ($rootScope.playing) {
+        heartbeat = $interval(heartbeatFn, 1000);
+        heartbeatFn();
+      }
+
+      $rootScope.$apply();
+    });
+  });
 
   return {
     connect: connect,
