@@ -22,6 +22,11 @@ angular.module('mpct', ['ionic'])
     hostname:   '192.168.0.10',
     port:       6603,
     useMarantz: false
+  },
+  monster: {
+    hostname:   '192.168.0.10',
+    port:       6604,
+    useMarantz: false
   }
 })
 
